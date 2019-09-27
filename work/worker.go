@@ -719,6 +719,7 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, rewardb
 
 	receipt, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 	if err != nil {
+		logger.Error("bc.ApplyTransaction", "err", err)
 		if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
 			tx.MarkUnexecutable(true)
 		}
