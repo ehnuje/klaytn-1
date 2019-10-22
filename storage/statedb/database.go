@@ -310,8 +310,8 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSize int) *Database {
 	if cacheSize > 0 {
 		trieNodeCache, _ = bigcache.NewBigCache(bigcache.Config{
 			Shards:             1024,
-			LifeWindow:         time.Hour,
-			MaxEntriesInWindow: cacheSize * 1024,
+			LifeWindow:         24 * time.Hour,
+			MaxEntriesInWindow: cacheSize / 4,
 			MaxEntrySize:       512,
 			HardMaxCacheSize:   cacheSize,
 			Hasher:             trieNodeHasher{},
