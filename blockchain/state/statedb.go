@@ -62,8 +62,9 @@ type StateDB struct {
 	trie Trie
 
 	// This map holds 'live' objects, which will get modified while processing a state transition.
-	stateObjects      map[common.Address]*stateObject
-	stateObjectsDirty map[common.Address]struct{}
+	stateObjects                    map[common.Address]*stateObject
+	stateObjectsDirty               map[common.Address]struct{}
+	stateObjectsToUpdateStorageRoot map[common.Address]*stateObject
 
 	// cachedStateObjects stores the most recent finalized stateObjects.
 	cachedStateObjects common.Cache
@@ -106,14 +107,15 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		return nil, err
 	}
 	return &StateDB{
-		db:                 db,
-		trie:               tr,
-		stateObjects:       make(map[common.Address]*stateObject),
-		stateObjectsDirty:  make(map[common.Address]struct{}),
-		cachedStateObjects: nil,
-		logs:               make(map[common.Hash][]*types.Log),
-		preimages:          make(map[common.Hash][]byte),
-		journal:            newJournal(),
+		db:                              db,
+		trie:                            tr,
+		stateObjects:                    make(map[common.Address]*stateObject),
+		stateObjectsToUpdateStorageRoot: make(map[common.Address]*stateObject),
+		stateObjectsDirty:               make(map[common.Address]struct{}),
+		cachedStateObjects:              nil,
+		logs:                            make(map[common.Hash][]*types.Log),
+		preimages:                       make(map[common.Hash][]byte),
+		journal:                         newJournal(),
 	}, nil
 }
 
@@ -816,8 +818,10 @@ func (self *StateDB) GetRefund() uint64 {
 
 // Finalise finalises the state by removing the self destructed objects
 // and clears the journal as well as the refunds.
-func (s *StateDB) Finalise(deleteEmptyObjects bool) {
+func (s *StateDB) Finalise(deleteEmptyObjects bool, updateStorageRoot bool) {
+	//logger.Error("$$$ Finalise $$$")
 	for addr := range s.journal.dirties {
+		//logger.Error(">>> Finalise by addr <<< ", "addr", addr.String(), "updateStorageRoot", updateStorageRoot)
 		stateObject, exist := s.stateObjects[addr]
 		if !exist {
 			// ripeMD is 'touched' at block 1714175, in tx 0x1237f737031e40bcde4a8b7e717b2d15e3ecadfe49bb1bbc71ee9deb09c6fcf2
@@ -832,20 +836,28 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 		if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {
 			s.deleteStateObject(stateObject)
 		} else {
-			stateObject.updateStorageRoot(s.db)
+			stateObject.updateStorageRoot(s.db, updateStorageRoot, s.stateObjectsToUpdateStorageRoot)
 			s.updateStateObject(stateObject)
 		}
 		s.stateObjectsDirty[addr] = struct{}{}
 	}
 	// Invalidate journal because reverting across transactions is not allowed.
 	s.clearJournalAndRefund()
+
+	if updateStorageRoot {
+		for _, so := range s.stateObjectsToUpdateStorageRoot {
+			so.UpdateStorageRoot(s.db)
+			s.updateStateObject(so)
+		}
+		s.stateObjectsToUpdateStorageRoot = make(map[common.Address]*stateObject)
+	}
 }
 
 // IntermediateRoot computes the current root hash of the state statedb.
 // It is called in between transactions to get the root hash that
 // goes into transaction receipts.
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
-	s.Finalise(deleteEmptyObjects)
+	s.Finalise(deleteEmptyObjects, true)
 	return s.trie.Hash()
 }
 
