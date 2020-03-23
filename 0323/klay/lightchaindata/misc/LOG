@@ -1,0 +1,41 @@
+=============== Mar 23, 2020 (KST) ===============
+17:04:48.096622 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+17:04:48.117557 db@open opening
+17:04:48.118099 version@stat F·[] S·0B[] Sc·[]
+17:04:48.143633 db@janitor F·2 G·0
+17:04:48.143679 db@open done T·26.085557ms
+17:04:48.671467 db@close closing
+17:04:48.671573 db@close done T·104.51µs
+=============== Mar 23, 2020 (KST) ===============
+17:07:03.967434 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+17:07:03.968571 version@stat F·[] S·0B[] Sc·[]
+17:07:03.968631 db@open opening
+17:07:03.968734 journal@recovery F·1
+17:07:03.969513 journal@recovery recovering @1
+17:07:03.973875 memdb@flush created L0@2 N·2 S·672B "h\x00\x00..\x13~t,v1":"kla..\xa7\x13~,v2"
+17:07:03.975303 version@stat F·[1] S·672B[672B] Sc·[0.25]
+17:07:04.001433 db@janitor F·3 G·0
+17:07:04.001470 db@open done T·32.825836ms
+=============== Mar 23, 2020 (KST) ===============
+17:13:49.523205 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+17:13:49.526755 version@stat F·[1] S·672B[672B] Sc·[0.25]
+17:13:49.526824 db@open opening
+17:13:49.526956 journal@recovery F·1
+17:13:49.527976 journal@recovery recovering @3
+17:13:49.529550 version@stat F·[1] S·672B[672B] Sc·[0.25]
+17:13:49.550540 db@janitor F·3 G·0
+17:13:49.550573 db@open done T·23.732672ms
+17:13:49.604541 db@close closing
+17:13:49.604724 db@close done T·181.352µs
+=============== Mar 23, 2020 (KST) ===============
+17:26:39.205856 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+17:26:39.209947 version@stat F·[1] S·672B[672B] Sc·[0.25]
+17:26:39.210028 db@open opening
+17:26:39.210153 journal@recovery F·1
+17:26:39.214341 journal@recovery recovering @5
+17:26:39.218928 memdb@flush created L0@7 N·1 S·618B "kla..\xa7\x13~,v4":"kla..\xa7\x13~,v4"
+17:26:39.222741 version@stat F·[2] S·1KiB[1KiB] Sc·[0.50]
+17:26:39.264524 db@janitor F·4 G·0
+17:26:39.264561 db@open done T·54.516482ms
+17:26:39.322407 db@close closing
+17:26:39.322623 db@close done T·214.858µs

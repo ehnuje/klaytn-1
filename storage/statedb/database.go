@@ -770,11 +770,14 @@ func (db *Database) writeBatchNodes(node common.Hash) error {
 			continue
 		}
 
+		logger.Info("", "key", common.BytesToHash(result.key).String())
+
 		if err := batch.Put(result.key, result.val); err != nil {
 			return err
 		}
 		if batch.ValueSize() > database.IdealBatchSize {
 			if err := batch.Write(); err != nil {
+				logger.Error("Error while batch.Write()", "err", err)
 				return err
 			}
 			batch.Reset()
@@ -783,6 +786,7 @@ func (db *Database) writeBatchNodes(node common.Hash) error {
 
 	enc := rootNode.rlp()
 	if err := batch.Put(node[:], enc); err != nil {
+		logger.Error("Error while batch.Put", "err", err)
 		return err
 	}
 	if err := batch.Write(); err != nil {
@@ -817,6 +821,7 @@ func (db *Database) Commit(node common.Hash, report bool, blockNum uint64) error
 	commitStart := time.Now()
 	if err := db.writeBatchPreimages(); err != nil {
 		db.lock.RUnlock()
+		logger.Error("db.writeBatchPreimages()", "err", err)
 		return err
 	}
 
@@ -824,6 +829,7 @@ func (db *Database) Commit(node common.Hash, report bool, blockNum uint64) error
 	numNodes, nodesSize := len(db.nodes), db.nodesSize
 	if err := db.writeBatchNodes(node); err != nil {
 		db.lock.RUnlock()
+		logger.Error("db.writeBatchNodes()", "err", err)
 		return err
 	}
 
@@ -884,8 +890,14 @@ func (db *Database) commit(hash common.Hash, resultCh chan<- commitResult) {
 	for _, child := range node.childs() {
 		db.commit(child, resultCh)
 	}
+
+	hashStr := hash.String()
+
 	enc := node.rlp()
 	resultCh <- commitResult{hash[:], enc}
+
+	logger.Info("encoding", "hash", hashStr, "len(node.rlp())",
+		len(enc), "node.size", node.size)
 
 	if db.trieNodeCache != nil {
 		db.trieNodeCache.Set(string(hash[:]), enc)

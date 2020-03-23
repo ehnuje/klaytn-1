@@ -186,6 +186,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 
 	// Check whether the genesis block is already written.
 	if genesis != nil {
+		logger.Info("Call genesis.ToBlock")
 		hash := genesis.ToBlock(nil).Hash()
 		if hash != stored {
 			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
@@ -272,8 +273,19 @@ func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 	if g.BlockScore == nil {
 		head.BlockScore = params.GenesisBlockScore
 	}
+	logger.Info("Call stateDB.Commit")
 	stateDB.Commit(false)
-	stateDB.Database().TrieDB().Commit(root, true, statedb.NoDataArchivingPreparation)
+	if err := stateDB.Database().TrieDB().Commit(root, true, statedb.NoDataArchivingPreparation); err != nil {
+		logger.Error("Failed to commit", "err", err)
+	}
+
+	database := state.NewDatabase(db)
+	_, err := database.OpenTrie(root)
+	if err != nil {
+		logger.Info("Failed to open a trie with the given rootHash", "root", root.String(), "err", err)
+	} else {
+		logger.Info("Opened a trie with the given rootHash", "root", root.String())
+	}
 
 	return types.NewBlock(head, nil, nil)
 }

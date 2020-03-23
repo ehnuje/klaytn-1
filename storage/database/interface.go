@@ -31,6 +31,7 @@ const (
 	BadgerDB
 	MemoryDB
 	PartitionedDB
+	DynamoDB
 )
 
 func (dbType DBType) String() string {
@@ -43,13 +44,15 @@ func (dbType DBType) String() string {
 		return "MemoryDB"
 	case PartitionedDB:
 		return "PartitionedDB"
+	case DynamoDB:
+		return "DynamoDB"
 	default:
 		logger.Error("Undefined DBType entered.", "entered DBType", dbType)
 		return "undefined"
 	}
 }
 
-const IdealBatchSize = 100 * 1024
+const IdealBatchSize = 1 * 1024
 
 // Putter wraps the database write operation supported by both batches and regular databases.
 type Putter interface {
