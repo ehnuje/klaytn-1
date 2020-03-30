@@ -11,7 +11,7 @@ type item struct {
 // It inserts the item to somewhere and returns the location of the item.
 // An item can be retrieved with the returned location, URI.
 type fileDB interface {
-	write(items []item) ([]uri, error)
+	write(items item) (uri, error)
 	read(key []byte) ([]byte, error)
 	delete(key []byte) error
 }

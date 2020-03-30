@@ -64,13 +64,13 @@ func (s *SuiteS3FileDB) TestS3FileDB() {
 		s.Fail("Failed to read", "err", err, "bucketName", *s.testBucketName)
 	}
 
-	var uris []uri
-	uris, err = s.s3DB.write([]item{{key: testKey, val: testVal}})
+	var uris uri
+	uris, err = s.s3DB.write(item{key: testKey, val: testVal})
 	if err != nil {
 		s.Fail("Failed to write", "err", err, "bucketName", *s.testBucketName)
 	}
 
-	if len(uris) != 1 {
+	if uris == "" {
 		s.Fail("Unexpected amount of uris are returned", "len(uris)", len(uris))
 	}
 
@@ -99,13 +99,13 @@ func (s *SuiteS3FileDB) TestS3FileDB_Overwrite() {
 	// This is to ensure deleting the bucket after the tests
 	defer s.s3DB.delete(testKey)
 
-	var urisList [][]uri
+	var uris []uri
 	for _, testVal := range testVals {
-		uris, err := s.s3DB.write([]item{{key: testKey, val: testVal}})
+		uri, err := s.s3DB.write(item{key: testKey, val: testVal})
 		if err != nil {
 			s.Fail("failed to write the data to s3FileDB", "err", err)
 		}
-		urisList = append(urisList, uris)
+		uris = append(uris, uri)
 	}
 
 	returnedVal, err := s.s3DB.read(testKey)
@@ -114,7 +114,7 @@ func (s *SuiteS3FileDB) TestS3FileDB_Overwrite() {
 	}
 
 	s.Equal(testVals[len(testVals)-1], returnedVal)
-	s.Equal(len(testVals), len(urisList))
+	s.Equal(len(testVals), len(uris))
 }
 
 func (s *SuiteS3FileDB) TestS3FileDB_EmptyDelete() {

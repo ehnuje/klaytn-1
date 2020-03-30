@@ -76,25 +76,21 @@ func (s3DB *s3FileDB) hasBucket(bucketName string) (bool, error) {
 }
 
 // write puts list of items to its bucket and returns the list of URIs.
-func (s3DB *s3FileDB) write(items []item) ([]uri, error) {
-	var uris []uri
+func (s3DB *s3FileDB) write(item item) (uri, error) {
+	var uri uri
 
-	for _, item := range items {
-		_, err := s3DB.s3.PutObject(&s3.PutObjectInput{
-			Bucket:      aws.String(s3DB.bucket),
-			Key:         aws.String(string(item.key)),
-			Body:        bytes.NewReader(item.val),
-			ContentType: aws.String("application/octet-stream"),
-		})
+	_, err := s3DB.s3.PutObject(&s3.PutObjectInput{
+		Bucket:      aws.String(s3DB.bucket),
+		Key:         aws.String(string(item.key)),
+		Body:        bytes.NewReader(item.val),
+		ContentType: aws.String("application/octet-stream"),
+	})
 
-		if err != nil {
-			return nil, fmt.Errorf("failed to write item to S3. key: %v, err: %w", string(item.key), err)
-		}
-
-		uris = append(uris, uri(item.key))
+	if err != nil {
+		return "", fmt.Errorf("failed to write item to S3. key: %v, err: %w", string(item.key), err)
 	}
 
-	return uris, nil
+	return uri, nil
 }
 
 // read gets the data from the bucket with the given key.
