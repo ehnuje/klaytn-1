@@ -272,8 +272,12 @@ func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 	if g.BlockScore == nil {
 		head.BlockScore = params.GenesisBlockScore
 	}
-	stateDB.Commit(false)
-	stateDB.Database().TrieDB().Commit(root, true, statedb.NoDataArchivingPreparation)
+	if _, err := stateDB.Commit(false); err != nil {
+		logger.Crit("", "err", err)
+	}
+	if err := stateDB.Database().TrieDB().Commit(root, true, statedb.NoDataArchivingPreparation); err != nil {
+		logger.Crit("", "err", err)
+	}
 
 	return types.NewBlock(head, nil, nil)
 }

@@ -769,13 +769,16 @@ func (db *Database) writeBatchNodes(node common.Hash) error {
 	}
 
 	batch := db.diskDB.NewBatch(database.StateTrieDB)
+	logger.Info("", "numGoRoutines", numGoRoutines)
 	for numGoRoutines > 0 {
 		result := <-resultCh
+
 		if result.key == nil && result.val == nil {
 			numGoRoutines--
 			continue
 		}
 
+		logger.Info("receivedResult", "result.key", common.BytesToHash(result.key).String())
 		if err := batch.Put(result.key, result.val); err != nil {
 			return err
 		}

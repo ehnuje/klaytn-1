@@ -103,6 +103,9 @@ func (bg *badgerDB) runValueLogGC() {
 	}
 }
 
+func (bg *badgerDB) WriteInternalBatch() {
+}
+
 func (bg *badgerDB) Type() DBType {
 	return BadgerDB
 }

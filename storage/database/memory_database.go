@@ -115,6 +115,9 @@ type memBatch struct {
 	size   int
 }
 
+func (db *MemDB) WriteInternalBatch() {
+}
+
 func (b *memBatch) Put(key, value []byte) error {
 	b.writes = append(b.writes, kv{common.CopyBytes(key), common.CopyBytes(value)})
 	b.size += len(value)

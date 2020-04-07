@@ -616,22 +616,38 @@ func (bc *BlockChain) ExportN(w io.Writer, first uint64, last uint64) error {
 // Note, this function assumes that the `mu` mutex is held!
 func (bc *BlockChain) insert(block *types.Block) {
 
+	start := time.Now()
 	// If the block is on a side chain or an unknown one, force other heads onto it too
 	updateHeads := bc.db.ReadCanonicalHash(block.NumberU64()) != block.Hash()
 
+	logger.Info("insert - ReadCanonicalHash", "elapsed", time.Since(start))
+
+	start = time.Now()
 	// Add the block to the canonical chain number scheme and mark as the head
 	bc.db.WriteCanonicalHash(block.Hash(), block.NumberU64())
 	bc.db.WriteHeadBlockHash(block.Hash())
 
+	logger.Info("insert - WriteCanonicalHash/WriteHeadBlockHash", "elapsed", time.Since(start))
+
+	start = time.Now()
 	bc.currentBlock.Store(block)
 
+	logger.Info("insert - currentBlock.Store", "elapsed", time.Since(start))
+
+	start = time.Now()
 	// If the block is better than our head or is on a different chain, force update heads
 	if updateHeads {
+		www := time.Now()
 		bc.hc.SetCurrentHeader(block.Header())
+		logger.Info("insert - updateHeads - SetCurrentHeader", "elapsed", time.Since(www))
+		www = time.Now()
+
 		bc.db.WriteHeadFastBlockHash(block.Hash())
+		logger.Info("insert - updateHeads - WriteHeadFastBlockHash", "elapsed", time.Since(www))
 
 		bc.currentFastBlock.Store(block)
 	}
+	logger.Info("insert - updateHeads", "elapsed", time.Since(start))
 }
 
 // Genesis retrieves the chain's genesis block.
@@ -1259,6 +1275,10 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
+	defer func() {
+		logger.Info("writeBlockWithStateParallel", "elapsed", time.Since(start))
+	}()
+
 	var status WriteStatus
 	// Calculate the total blockscore of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
@@ -1267,13 +1287,17 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 			"hash", block.Hash(), "parentHash", block.ParentHash())
 		return NonStatTy, consensus.ErrUnknownAncestor
 	}
+
 	// Make sure no inconsistent state is leaked during insertion
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
+	shouldTryInsertTime := time.Now()
 	if !bc.ShouldTryInserting(block) {
 		return NonStatTy, ErrKnownBlock
 	}
+
+	logger.Info("bc.ShouldTryInserting", "elapsed", time.Since(shouldTryInsertTime))
 
 	currentBlock := bc.CurrentBlock()
 	localTd := bc.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
@@ -1284,6 +1308,9 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	// Irrelevant of the canonical status, write the block itself to the database
 	// TODO-Klaytn-Storage Implementing worker pool pattern instead of generating goroutines every time.
 	parallelDBWriteWG.Add(4)
+
+	ttt := time.Now()
+
 	go func() {
 		defer parallelDBWriteWG.Done()
 		bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd)
@@ -1309,6 +1336,10 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 
 	// Wait until all writing goroutines are terminated.
 	parallelDBWriteWG.Wait()
+	bc.db.WriteInternalBatch()
+
+	logger.Info("Parallel Write Time", "elapsed", time.Since(ttt))
+
 	select {
 	case err := <-parallelDBWriteErrCh:
 		return NonStatTy, err
@@ -1366,13 +1397,19 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 // finalizeWriteBlockWithState updates metrics and inserts block when status is CanonStatTy.
 func (bc *BlockChain) finalizeWriteBlockWithState(block *types.Block, status WriteStatus, startTime time.Time) (WriteStatus, error) {
 	// Set new head.
+	start := time.Now()
+	defer func() { logger.Info("finalizeWriteBlockWithState", "elapsed", time.Since(start)) }()
+
 	if status == CanonStatTy {
 		bc.insert(block)
 		headBlockNumberGauge.Update(block.Number().Int64())
 		blockTxCountsGauge.Update(int64(block.Transactions().Len()))
 		blockTxCountsCounter.Inc(int64(block.Transactions().Len()))
 	}
+	logger.Info("finalizeWriteBlockWithState - bc.insert", "elapsed", time.Since(start))
 	bc.futureBlocks.Remove(block.Hash())
+
+	bc.db.WriteInternalBatch()
 
 	elapsed := time.Since(startTime)
 	logger.Debug("WriteBlockWithState", "blockNum", block.Number(), "parentHash", block.Header().ParentHash, "txs", len(block.Transactions()), "elapsed", elapsed)
@@ -1479,7 +1516,11 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		err := <-results
 		if err == nil {
+			ss := time.Now()
 			err = bc.Validator().ValidateBody(block)
+			logger.Info("ValidateBody", "elapsed", time.Since(ss))
+		} else {
+			logger.Error("ValidateBody", "err", err)
 		}
 
 		switch {
@@ -1556,6 +1597,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 
+		logger.Info("Before Processing Block", "elapsed", time.Since(bstart))
+
 		// for debug
 		start := time.Now()
 
@@ -1569,9 +1612,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if block.Transactions().Len() > 0 {
 
 			elapsed := time.Since(start)
-			logger.Debug("blockchain.blockchain processing block", "elapsed", elapsed, "txs", block.Transactions().Len())
+			logger.Info("blockchain.blockchain processing block", "elapsed", elapsed, "txs", block.Transactions().Len())
 		}
-
 		// Validate the state using the default validator
 		err = bc.Validator().ValidateState(block, parent, stateDB, receipts, usedGas)
 		if err != nil {
@@ -1579,6 +1621,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
+
+		logger.Info("##### Start WriteBlockWithState #####", "num", block.NumberU64())
+		writeBlockWithStateStart := time.Now()
 
 		// Write the block to the chain and get the status.
 		status, err := bc.WriteBlockWithState(block, receipts, stateDB)
@@ -1590,9 +1635,11 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 
+		logger.Info("##### End WriteBlockWithState #####", "num", block.NumberU64(), "elapsed", time.Since(writeBlockWithStateStart))
+
 		switch status {
 		case CanonStatTy:
-			logger.Debug("Inserted new block", "number", block.Number(), "hash", block.Hash(),
+			logger.Info("Inserted new block", "number", block.Number(), "hash", block.Hash(),
 				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(time.Since(bstart)))
 
 			coalescedLogs = append(coalescedLogs, logs...)

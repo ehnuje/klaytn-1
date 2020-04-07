@@ -30,6 +30,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
 var logger = log.NewModuleLogger(log.StorageDatabase)
@@ -44,6 +45,8 @@ type DBManager interface {
 	GetMemDB() *MemDB
 	GetDBConfig() *DBConfig
 	SetStateTrieMigrationDB(blockNum uint64)
+
+	WriteInternalBatch()
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -350,6 +353,8 @@ func newDatabase(dbc *DBConfig, entryType DBEntryType) (Database, error) {
 		return NewBadgerDB(dbc.Dir)
 	case MemoryDB:
 		return NewMemDB(), nil
+	case DynamoDB:
+		return NewDynamoDB(createTestDynamoDBConfig())
 	default:
 		logger.Info("database type is not set, fall back to default LevelDB")
 		return NewLevelDB(dbc, 0)
@@ -369,6 +374,9 @@ func newDatabaseManager(dbc *DBConfig) *databaseManager {
 // If Partitioned is true, each Database will have its own LevelDB.
 // If not, each Database will share one common LevelDB.
 func NewDBManager(dbc *DBConfig) DBManager {
+	dbc.Partitioned = false
+	dbc.DBType = DynamoDB
+
 	if !dbc.Partitioned {
 		logger.Info("Non-partitioned database is used for persistent storage", "DBType", dbc.DBType)
 		if dbm, err := singleDatabaseDBManager(dbc); err != nil {
@@ -528,6 +536,8 @@ func (dbm *databaseManager) Close() {
 // Canonical Hash operations.
 // ReadCanonicalHash retrieves the hash assigned to a canonical block number.
 func (dbm *databaseManager) ReadCanonicalHash(number uint64) common.Hash {
+	start := time.Now()
+
 	if cached := dbm.cm.readCanonicalHashCache(number); !common.EmptyHash(cached) {
 		return cached
 	}
@@ -535,8 +545,10 @@ func (dbm *databaseManager) ReadCanonicalHash(number uint64) common.Hash {
 	db := dbm.getDatabase(headerDB)
 	data, _ := db.Get(headerHashKey(number))
 	if len(data) == 0 {
+		logger.Info("ReadCanonicalHash - NoData", "elapsed", time.Since(start))
 		return common.Hash{}
 	}
+	logger.Info("ReadCanonicalHash - DataFound", "elapsed", time.Since(start))
 
 	hash := common.BytesToHash(data)
 	dbm.cm.writeCanonicalHashCache(number, hash)
@@ -1775,4 +1787,10 @@ func (dbm *databaseManager) WriteGovernanceState(b []byte) error {
 func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
 	db := dbm.getDatabase(MiscDB)
 	return db.Get(governanceStateKey)
+}
+
+func (dbm *databaseManager) WriteInternalBatch() {
+	for _, db := range dbm.dbs {
+		db.WriteInternalBatch()
+	}
 }

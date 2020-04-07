@@ -77,8 +77,6 @@ func (s3DB *s3FileDB) hasBucket(bucketName string) (bool, error) {
 
 // write puts list of items to its bucket and returns the list of URIs.
 func (s3DB *s3FileDB) write(item item) (uri, error) {
-	var uri uri
-
 	_, err := s3DB.s3.PutObject(&s3.PutObjectInput{
 		Bucket:      aws.String(s3DB.bucket),
 		Key:         aws.String(string(item.key)),
@@ -90,11 +88,12 @@ func (s3DB *s3FileDB) write(item item) (uri, error) {
 		return "", fmt.Errorf("failed to write item to S3. key: %v, err: %w", string(item.key), err)
 	}
 
-	return uri, nil
+	return uri(item.key), nil
 }
 
 // read gets the data from the bucket with the given key.
 func (s3DB *s3FileDB) read(key []byte) ([]byte, error) {
+	logger.Info("s3 read requested")
 	output, err := s3DB.s3.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(s3DB.bucket),
 		//IfMatch:                    nil,

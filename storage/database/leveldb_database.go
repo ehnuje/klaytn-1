@@ -225,6 +225,9 @@ func NewLevelDBWithOption(dbPath string, ldbOption *opt.Options) (*levelDB, erro
 
 }
 
+func (db *levelDB) WriteInternalBatch() {
+}
+
 func (db *levelDB) Type() DBType {
 	return LevelDB
 }

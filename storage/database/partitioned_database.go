@@ -100,6 +100,10 @@ func calcPartition(key []byte, numPartitions uint) (int, error) {
 	return int(key[0]) & (int(numPartitions) - 1), nil
 }
 
+func (pdb *partitionedDB) WriteInternalBatch() {
+
+}
+
 // getPartition returns the partition corresponding to the given key.
 func (pdb *partitionedDB) getPartition(key []byte) (Database, error) {
 	if partitionIndex, err := calcPartition(key, uint(pdb.numPartitions)); err != nil {

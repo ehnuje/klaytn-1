@@ -17,6 +17,7 @@
 package database
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
@@ -24,8 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/klaytn/klaytn/log"
-	"strconv"
-	"strings"
+	"math"
 	"time"
 )
 
@@ -50,10 +50,10 @@ const dynamoItemSizeLimit = 400 * 1024
 func createTestDynamoDBConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "ap-northeast-2",
-		Endpoint:           "http://localhost:8000",
-		TableName:          "test-dynamo-db-" + strconv.Itoa(time.Now().Nanosecond()),
-		ReadCapacityUnits:  10,
-		WriteCapacityUnits: 10,
+		Endpoint:           "https://dynamodb.ap-northeast-2.amazonaws.com", //"http://localhost:4569",  "https://dynamodb.ap-northeast-2.amazonaws.com"
+		TableName:          "kas-test-melvin-555",                           // + strconv.Itoa(time.Now().Nanosecond()),
+		ReadCapacityUnits:  100,
+		WriteCapacityUnits: 100,
 	}
 }
 
@@ -62,6 +62,8 @@ type dynamoDB struct {
 	db     *dynamodb.DynamoDB
 	fdb    fileDB
 	logger log.Logger // Contextual logger tracking the database path
+
+	internalBatch Batch
 }
 
 func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
@@ -98,17 +100,19 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 
 	dynamoDB.fdb = s3FileDB
 
+	dynamoDB.internalBatch = dynamoDB.NewBatch()
+
 	// Table already exists, return here without doing anything
 	if tableExists {
 		dynamoDB.logger.Info("")
 		return dynamoDB, nil
 	}
 
-	// Table does not exist, create one here
-	if err := dynamoDB.createTable(); err != nil {
-		dynamoDB.logger.Error("")
-		return nil, err
-	}
+	//// Table does not exist, create one here
+	//if err := dynamoDB.createTable(); err != nil {
+	//	dynamoDB.logger.Error("")
+	//	return nil, err
+	//}
 
 	dynamoDB.logger.Info("")
 	return dynamoDB, nil
@@ -195,11 +199,19 @@ type DynamoData struct {
 
 // Put inserts the given key and value pair to the database.
 func (dynamo *dynamoDB) Put(key []byte, val []byte) error {
-	logger.Info("Put Size", "len(val)", len(val))
-	//if len(val) > dynamoItemSizeLimit {
-	//	_, err := dynamo.fdb.write(item{key: key, val: val})
-	//	return err
-	//}
+	//start := time.Now()
+	//defer logger.Info("", "keySize", len(key), "valSize", len(val),
+	//	 "putElapsedTime", time.Since(start))
+	//return dynamo.internalBatch.Put(key, val)
+
+	if len(val) > dynamoItemSizeLimit {
+		_, err := dynamo.fdb.write(item{key: key, val: val})
+		if err != nil {
+			return err
+		}
+
+		return dynamo.Put(key, overSizedDataPrefix)
+	}
 
 	data := DynamoData{Key: key, Val: val}
 	marshaledData, err := dynamodbattribute.MarshalMap(data)
@@ -212,14 +224,19 @@ func (dynamo *dynamoDB) Put(key []byte, val []byte) error {
 		Item:      marshaledData,
 	}
 
-	output, err := dynamo.db.PutItem(params)
+	//marshalTime := time.Since(start)
+	_, err = dynamo.db.PutItem(params)
 	if err != nil {
 		fmt.Printf("Put ERROR: %v\n", err.Error())
 		return err
 	}
 
-	fmt.Println(output)
 	return nil
+}
+
+func (dynamo *dynamoDB) WriteInternalBatch() {
+	dynamo.internalBatch.Write()
+	dynamo.internalBatch.Reset()
 }
 
 // Has returns true if the corresponding value to the given key exists.
@@ -230,8 +247,14 @@ func (dynamo *dynamoDB) Has(key []byte) (bool, error) {
 	return true, nil
 }
 
+var overSizedDataPrefix = []byte("oversizeditem")
+
 // Get returns the corresponding value to the given key if exists.
 func (dynamo *dynamoDB) Get(key []byte) ([]byte, error) {
+
+	//getStart := time.Now()
+	//defer func() {logger.Error("Get", "elapsed", time.Since(getStart))}()
+
 	params := &dynamodb.GetItemInput{
 		TableName: aws.String(dynamo.config.TableName),
 		Key: map[string]*dynamodb.AttributeValue{
@@ -243,11 +266,13 @@ func (dynamo *dynamoDB) Get(key []byte) ([]byte, error) {
 
 	result, err := dynamo.db.GetItem(params)
 	if err != nil {
-		if strings.Contains(err.Error(), "NoSuchKey") {
-			return dynamo.fdb.read(key)
-		}
 		fmt.Printf("Get ERROR: %v\n", err.Error())
 		return nil, err
+	}
+
+	if result.Item == nil {
+		return nil, dataNotFoundErr
+		//return dynamo.fdb.read(key)
 	}
 
 	var data DynamoData
@@ -256,11 +281,14 @@ func (dynamo *dynamoDB) Get(key []byte) ([]byte, error) {
 	}
 
 	if data.Val == nil {
-		dynamo.fdb.read(key)
 		return nil, dataNotFoundErr
 	}
 
-	return data.Val, nil
+	if !bytes.Equal(data.Val, overSizedDataPrefix) {
+		return data.Val, nil
+	} else {
+		return dynamo.fdb.read(key)
+	}
 }
 
 // Delete deletes the key from the queue and database
@@ -284,6 +312,10 @@ func (dynamo *dynamoDB) Delete(key []byte) error {
 }
 
 func (dynamo *dynamoDB) Close() {
+	if err := dynamo.internalBatch.Write(); err != nil {
+		logger.Error("", "err", err)
+	}
+
 	dynamo.logger.Info("There's nothing to do when closing DynamoDB")
 }
 
@@ -303,13 +335,12 @@ type dynamoBatch struct {
 }
 
 func (batch *dynamoBatch) Put(key, val []byte) error {
-	logger.Info("Batch Put Size", "len(val)", len(val))
 	// If the size of the item is larger than the limit, it should be handled in different way
-	//if len(val) > dynamoItemSizeLimit {
-	//	batch.oversizeBatchItems = append(batch.oversizeBatchItems, item{key: key, val: val})
-	//	batch.size += len(val)
-	//	return nil
-	//}
+	if len(val) > dynamoItemSizeLimit {
+		batch.oversizeBatchItems = append(batch.oversizeBatchItems, item{key: key, val: val})
+		batch.size += len(val)
+		return nil
+	}
 
 	data := DynamoData{Key: key, Val: val}
 	marshaledData, err := dynamodbattribute.MarshalMap(data)
@@ -327,24 +358,60 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 }
 
 func (batch *dynamoBatch) Write() error {
-	_, err := batch.db.db.BatchWriteItem(&dynamodb.BatchWriteItemInput{
-		RequestItems: map[string][]*dynamodb.WriteRequest{
-			batch.tableName: batch.batchItems,
-		},
-		ReturnConsumedCapacity:      nil,
-		ReturnItemCollectionMetrics: nil,
-	})
-	if err != nil {
-		return err
+	if batch.size == 0 {
+		return nil
+	}
+
+	start := time.Now()
+
+	writtenItems := 0
+	totalItems := len(batch.batchItems)
+
+	errCh := make(chan error, totalItems/25+len(batch.oversizeBatchItems)+1)
+	numErrsToCheck := 0
+
+	logger.Info("", "errChSize", cap(errCh))
+
+	for writtenItems < totalItems {
+		thisTime := int(math.Min(25.0, float64(totalItems-writtenItems)))
+		thisTimeItems := batch.batchItems[writtenItems : writtenItems+thisTime]
+
+		go func(bis []*dynamodb.WriteRequest) {
+			_, err := batch.db.db.BatchWriteItem(&dynamodb.BatchWriteItemInput{
+				RequestItems: map[string][]*dynamodb.WriteRequest{
+					batch.tableName: bis,
+				},
+				ReturnConsumedCapacity:      nil,
+				ReturnItemCollectionMetrics: nil,
+			})
+			errCh <- err
+			numErrsToCheck++
+		}(thisTimeItems)
+
+		writtenItems += thisTime
 	}
 
 	for _, item := range batch.oversizeBatchItems {
-		_, err := batch.db.fdb.write(item)
-		if err != nil {
+		go func() {
+			_, err := batch.db.fdb.write(item)
+			if err == nil {
+				if err2 := batch.db.Put(item.key, overSizedDataPrefix); err2 != nil {
+					errCh <- err2
+					numErrsToCheck++
+				}
+			}
+			errCh <- err
+			numErrsToCheck++
+		}()
+	}
+
+	for i := 0; i < numErrsToCheck; i++ {
+		if err := <-errCh; err != nil {
 			return err
 		}
 	}
 
+	logger.Info("batch write time 22222", "elapsedTime", time.Since(start))
 	return nil
 }
 
