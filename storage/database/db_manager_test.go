@@ -21,9 +21,13 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/log/term"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/mattn/go-colorable"
 	"github.com/stretchr/testify/assert"
+	"io"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -34,15 +38,17 @@ import (
 var dbManagers []DBManager
 var dbConfigs = make([]*DBConfig, 0, len(baseConfigs)*3)
 var baseConfigs = []*DBConfig{
-	{DBType: LevelDB, Partitioned: false, NumStateTriePartitions: 1, ParallelDBWrite: false},
-	{DBType: LevelDB, Partitioned: false, NumStateTriePartitions: 1, ParallelDBWrite: true},
-	{DBType: LevelDB, Partitioned: false, NumStateTriePartitions: 4, ParallelDBWrite: false},
-	{DBType: LevelDB, Partitioned: false, NumStateTriePartitions: 4, ParallelDBWrite: true},
+	//{DBType: LevelDB, Partitioned: false, NumStateTriePartitions: 1, ParallelDBWrite: false},
+	//{DBType: LevelDB, Partitioned: false, NumStateTriePartitions: 1, ParallelDBWrite: true},
+	//{DBType: LevelDB, Partitioned: false, NumStateTriePartitions: 4, ParallelDBWrite: false},
+	//{DBType: LevelDB, Partitioned: false, NumStateTriePartitions: 4, ParallelDBWrite: true},
+	//
+	//{DBType: LevelDB, Partitioned: true, NumStateTriePartitions: 1, ParallelDBWrite: false},
+	//{DBType: LevelDB, Partitioned: true, NumStateTriePartitions: 1, ParallelDBWrite: true},
+	//{DBType: LevelDB, Partitioned: true, NumStateTriePartitions: 4, ParallelDBWrite: false},
+	//{DBType: LevelDB, Partitioned: true, NumStateTriePartitions: 4, ParallelDBWrite: true},
 
-	{DBType: LevelDB, Partitioned: true, NumStateTriePartitions: 1, ParallelDBWrite: false},
-	{DBType: LevelDB, Partitioned: true, NumStateTriePartitions: 1, ParallelDBWrite: true},
-	{DBType: LevelDB, Partitioned: true, NumStateTriePartitions: 4, ParallelDBWrite: false},
-	{DBType: LevelDB, Partitioned: true, NumStateTriePartitions: 4, ParallelDBWrite: true},
+	{DBType: RelationalDB, Partitioned: false, NumStateTriePartitions: 1, ParallelDBWrite: true},
 }
 
 var num1 = uint64(20190815)
@@ -97,9 +103,24 @@ func TestDBManager_IsParallelDBWrite(t *testing.T) {
 		assert.Equal(t, c.ParallelDBWrite, dbm.IsParallelDBWrite())
 	}
 }
+func enableLog() {
+	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"
+	output := io.Writer(os.Stderr)
+	if usecolor {
+		output = colorable.NewColorableStderr()
+	}
+	glogger := log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
+	log.PrintOrigins(true)
+	log.ChangeGlobalLogLevel(glogger, log.Lvl(5))
+	glogger.Vmodule("")
+	glogger.BacktraceAt("")
+	log.Root().SetHandler(glogger)
+}
 
 // TestDBManager_CanonicalHash tests read, write and delete operations of canonical hash.
 func TestDBManager_CanonicalHash(t *testing.T) {
+	enableLog()
+
 	for _, dbm := range dbManagers {
 		// 1. Read from empty database, shouldn't be found.
 		assert.Equal(t, common.Hash{}, dbm.ReadCanonicalHash(0))

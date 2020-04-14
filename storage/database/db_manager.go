@@ -350,6 +350,8 @@ func newDatabase(dbc *DBConfig, entryType DBEntryType) (Database, error) {
 		return NewBadgerDB(dbc.Dir)
 	case MemoryDB:
 		return NewMemDB(), nil
+	case RelationalDB:
+		return newRelationalDatabase("", "mysql")
 	default:
 		logger.Info("database type is not set, fall back to default LevelDB")
 		return NewLevelDB(dbc, 0)
@@ -370,6 +372,7 @@ func newDatabaseManager(dbc *DBConfig) *databaseManager {
 // If not, each Database will share one common LevelDB.
 func NewDBManager(dbc *DBConfig) DBManager {
 	if !dbc.Partitioned {
+		dbc.DBType = RelationalDB
 		logger.Info("Non-partitioned database is used for persistent storage", "DBType", dbc.DBType)
 		if dbm, err := singleDatabaseDBManager(dbc); err != nil {
 			logger.Crit("Failed to create non-partitioned database", "DBType", dbc.DBType, "err", err)

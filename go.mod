@@ -14,7 +14,7 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/fjl/memsize v0.0.0-20180427083637-f6d5545993d6
 	github.com/go-kit/kit v0.9.0 // indirect
-	github.com/go-sql-driver/mysql v1.4.1
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-stack/stack v1.8.0
 	github.com/golang/mock v1.3.1-0.20190508161146-9fa652df1129
 	github.com/golang/protobuf v1.3.2
@@ -23,11 +23,13 @@ require (
 	github.com/huin/goupnp v1.0.0
 	github.com/influxdata/influxdb v1.5.2
 	github.com/jackpal/go-nat-pmp v1.0.1
+	github.com/jinzhu/gorm v1.9.12
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/klauspost/compress v1.4.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.2
 	github.com/mattn/go-runewidth v0.0.2 // indirect
+	github.com/mattn/go-sqlite3 v2.0.1+incompatible
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.1
 	github.com/otiai10/copy v1.0.1
@@ -51,7 +53,7 @@ require (
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/multierr v1.2.0 // indirect
 	go.uber.org/zap v1.10.0
-	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7
+	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd
 	golang.org/x/net v0.0.0-20191003171128-d98b1b443823
 	golang.org/x/sys v0.0.0-20190912141932-bc967efca4b8
 	golang.org/x/text v0.3.2 // indirect
