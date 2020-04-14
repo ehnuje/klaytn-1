@@ -97,12 +97,12 @@ func setMySQLDatabase(mysql *gorm.DB) error {
 }
 
 const mysqlPutQuery = `
-			INSERT INTO test.key_value_models(binkey, binval)
+			INSERT delayed INTO test.key_value_models(binkey, binval)
 			VALUES (?, ?) 
 			ON DUPLICATE KEY UPDATE binval=values(binval)`
 
 const mysqlBatchQuery = `
-			INSERT INTO test.key_value_models(binkey, binval)
+			INSERT delayed INTO test.key_value_models(binkey, binval)
 			VALUES %s 
 			ON DUPLICATE KEY UPDATE binkey=values(binkey), binval=values(binval)`
 
