@@ -97,12 +97,12 @@ func setMySQLDatabase(mysql *gorm.DB) error {
 }
 
 const mysqlPutQuery = `
-			INSERT delayed INTO test.key_value_models(binkey, binval)
+			INSERT INTO test.key_value_models(binkey, binval)
 			VALUES (?, ?) 
 			ON DUPLICATE KEY UPDATE binval=values(binval)`
 
 const mysqlBatchQuery = `
-			INSERT delayed INTO test.key_value_models(binkey, binval)
+			INSERT INTO test.key_value_models(binkey, binval)
 			VALUES %s 
 			ON DUPLICATE KEY UPDATE binkey=values(binkey), binval=values(binval)`
 
@@ -233,10 +233,6 @@ func (b *rdbBatch) Write() error {
 
 			elapsed := time.Since(batchWriteStart)
 			logger.Info("BatchWrite over 1000 items", "elapsed", elapsed)
-
-			if elapsed >= 800*time.Millisecond {
-				logger.Warn("Too long execution time", "query", query, "elapsed", elapsed)
-			}
 
 			placeholders = []string{}
 			queryArgs = []interface{}{}
