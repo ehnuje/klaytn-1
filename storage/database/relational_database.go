@@ -193,6 +193,11 @@ func (b *rdbBatch) Write() error {
 	if b.size == 0 {
 		return nil
 	}
+	start := time.Now()
+	defer func() {
+		logger.Info("BatchWrite", "elapsed", time.Since(start), "size", b.size, "numItems", len(b.batchItems))
+	}()
+
 	placeholders, queryArgs := b.genPlaceholdersAndArgs()
 
 	var query string
