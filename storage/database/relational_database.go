@@ -198,7 +198,32 @@ func (b *rdbBatch) Write() error {
 		logger.Info("BatchWrite", "elapsed", time.Since(start), "size", b.size, "numItems", len(b.batchItems))
 	}()
 
-	placeholders, queryArgs := b.genPlaceholdersAndArgs()
+	var placeholders []string
+	var queryArgs []interface{}
+
+	numItems := 0
+	for _, item := range b.batchItems {
+		numItems++
+
+		placeholders = append(placeholders, "(?,?)")
+		queryArgs = append(queryArgs, item.Key)
+		queryArgs = append(queryArgs, item.Val)
+
+		if numItems >= 1500 {
+			concatenatedPlaceholders := strings.Join(placeholders, ",")
+			query := fmt.Sprintf(mysqlBatchQuery, concatenatedPlaceholders)
+
+			batchWriteStart := time.Now()
+			if err := b.db.Exec(query, queryArgs...).Error; err != nil {
+				return err
+			}
+			logger.Info("BatchWrite over 1500 items", "elapsed", time.Since(batchWriteStart))
+
+			placeholders = []string{}
+			queryArgs = []interface{}{}
+			numItems = 0
+		}
+	}
 
 	var query string
 	switch b.db.Dialect().GetName() {
