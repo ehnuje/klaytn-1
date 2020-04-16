@@ -209,15 +209,16 @@ func (b *rdbBatch) Write() error {
 		queryArgs = append(queryArgs, item.Key)
 		queryArgs = append(queryArgs, item.Val)
 
-		if numItems >= 1500 {
+		if numItems >= 1000 {
 			concatenatedPlaceholders := strings.Join(placeholders, ",")
 			query := fmt.Sprintf(mysqlBatchQuery, concatenatedPlaceholders)
 
 			batchWriteStart := time.Now()
 			if err := b.db.Exec(query, queryArgs...).Error; err != nil {
+				logger.Error("Error while batch write", "err", err, "query", query)
 				return err
 			}
-			logger.Info("BatchWrite over 1500 items", "elapsed", time.Since(batchWriteStart))
+			logger.Info("BatchWrite over 1000 items", "elapsed", time.Since(batchWriteStart))
 
 			placeholders = []string{}
 			queryArgs = []interface{}{}
@@ -225,12 +226,16 @@ func (b *rdbBatch) Write() error {
 		}
 	}
 
+	if numItems == 0 {
+		return nil
+	}
+
 	var query string
 	switch b.db.Dialect().GetName() {
 	case mysqlDialect:
-		query = fmt.Sprintf(mysqlBatchQuery, placeholders)
+		query = fmt.Sprintf(mysqlBatchQuery, strings.Join(placeholders, ","))
 	case sqliteDialect:
-		query = fmt.Sprintf(sqliteBatchQuery, placeholders)
+		query = fmt.Sprintf(sqliteBatchQuery, strings.Join(placeholders, ","))
 	default:
 		return fmt.Errorf("%w - given dialect: %s", notSupportedDialectErr, b.db.Dialect().GetName())
 	}
