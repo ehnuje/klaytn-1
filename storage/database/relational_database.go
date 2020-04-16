@@ -230,7 +230,13 @@ func (b *rdbBatch) Write() error {
 				logger.Error("Error while batch write", "err", err, "query", query)
 				return err
 			}
-			logger.Info("BatchWrite over 1000 items", "elapsed", time.Since(batchWriteStart))
+
+			elapsed := time.Since(batchWriteStart)
+			logger.Info("BatchWrite over 1000 items", "elapsed", elapsed)
+
+			if elapsed >= 800*time.Millisecond {
+				logger.Warn("Too long execution time", "query", query, "elapsed", elapsed)
+			}
 
 			placeholders = []string{}
 			queryArgs = []interface{}{}
