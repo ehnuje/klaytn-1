@@ -93,6 +93,14 @@ func setMySQLDatabase(mysql *gorm.DB) error {
 	if err := mysql.Exec("USE test").Error; err != nil {
 		return err
 	}
+
+	if err := mysql.Exec("SET STATISTICS PROFILE ON").Error; err != nil {
+		return err
+	}
+
+	if err := mysql.Exec("SET STATISTICS IO ON").Error; err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -228,13 +236,14 @@ func (b *rdbBatch) Write() error {
 			query := fmt.Sprintf(mysqlBatchQuery, concatenatedPlaceholders)
 
 			batchWriteStart := time.Now()
-			if err := b.db.Exec(query, queryArgs...).Error; err != nil {
+			execResult := b.db.Exec(query, queryArgs...)
+			if err := execResult.Error; err != nil {
 				logger.Error("Error while batch write", "err", err, "query", query)
 				return err
 			}
 
 			elapsed := time.Since(batchWriteStart)
-			logger.Info("BatchWrite over 1000 items", "elapsed", elapsed)
+			logger.Info("BatchWrite 1000 items", "elapsed", elapsed, "value", execResult.Value)
 
 			placeholders = []string{}
 			queryArgs = []interface{}{}
