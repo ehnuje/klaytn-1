@@ -52,7 +52,7 @@ func (dbType DBType) String() string {
 	}
 }
 
-const IdealBatchSize = 100 * 1024
+const IdealBatchSize = 1000 * 1024
 
 // Putter wraps the database write operation supported by both batches and regular databases.
 type Putter interface {
