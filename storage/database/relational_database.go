@@ -94,7 +94,7 @@ func setMySQLDatabase(mysql *gorm.DB) error {
 		return err
 	}
 
-	if err := mysql.Exec("SET STATISTICS PROFILE ON").Error; err != nil {
+	if err := mysql.Exec("SET profiling = 1").Error; err != nil {
 		return err
 	}
 
