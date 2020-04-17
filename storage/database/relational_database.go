@@ -203,16 +203,16 @@ func (b *rdbBatch) Write() error {
 
 	numItems := 0
 
-	if err := b.db.Exec("ALTER TABLE test.key_value_models DISABLE KEYS").Error; err != nil {
-		logger.Error("Error while altering table", "err", err)
-		return err
-	}
-
-	defer func() {
-		if err := b.db.Exec("ALTER TABLE test.key_value_models ENABLE KEYS").Error; err != nil {
-			logger.Error("Error while altering table", "err", err)
-		}
-	}()
+	//if err := b.db.Exec("ALTER TABLE test.key_value_models DISABLE KEYS").Error; err != nil {
+	//	logger.Error("Error while altering table", "err", err)
+	//	return err
+	//}
+	//
+	//defer func() {
+	//	if err := b.db.Exec("ALTER TABLE test.key_value_models ENABLE KEYS").Error; err != nil {
+	//		logger.Error("Error while altering table", "err", err)
+	//	}
+	//}()
 
 	first := true
 	for _, item := range b.batchItems {
