@@ -11,6 +11,12 @@ func BenchmarkRelationalDatabase_Put(b *testing.B) {
 
 }
 
+type PerformanceData struct {
+	Id        int    `gorm:"column:EVENT_ID;type:bigint(20) unsigned"`
+	TimerWait uint64 `gorm:"column:TIMER_WAIT;type:bigint(20) unsigned"`
+	SqlText   string `gorm:"column;SQL_TEXT;type:longtext"`
+}
+
 func newTestRelationalDB() (*rdb, error) {
 	id := "root"
 	password := "root"
@@ -30,6 +36,19 @@ func newTestRelationalDB() (*rdb, error) {
 		return nil, err
 	}
 
+	db.Exec("INSERT INTO performance_schema.setup_actors (HOST,USER,ROLE,ENABLED,HISTORY) VALUES('localhost','root','%','YES','YES');")
+	db.Exec("UPDATE performance_schema.setup_instruments SET ENABLED = 'YES', TIMED = 'YES' WHERE NAME LIKE '%statement/%';")
+	db.Exec("UPDATE performance_schema.setup_instruments SET ENABLED = 'YES', TIMED = 'YES' WHERE NAME LIKE '%stage/%';")
+
+	db.Exec("UPDATE performance_schema.setup_consumers SET ENABLED = 'YES' WHERE NAME LIKE '%events_statements_%';")
+	db.Exec("UPDATE performance_schema.setup_consumers SET ENABLED = 'YES' WHERE NAME LIKE '%events_stages_%';")
+
+	db.Exec("SELECT * from test.key_value_models")
+
+	var data PerformanceData
+	db.Raw("SELECT EVENT_ID, TRUNCATE(TIMER_WAIT/1000000000000,6) as Duration, SQL_TEXT FROM performance_schema.events_statements_history_long where SQL_TEXT is not null;").Scan(&data)
+
+	fmt.Println(data)
 	return &rdb{db: db, logger: logger.NewWith("", "")}, nil
 }
 
