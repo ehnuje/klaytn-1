@@ -233,7 +233,7 @@ func (b *rdbBatch) Write() error {
 	//	}
 	//}()
 
-	maxBatchSize := 2000
+	maxBatchSize := 1000
 
 	for _, item := range b.batchItems {
 		numItems++
@@ -261,7 +261,7 @@ func (b *rdbBatch) Write() error {
 				return err
 			}
 
-			logger.Info("BatchWrite 2000 items", "elapsed", time.Since(batchWriteStart), "numItems", numItems)
+			logger.Info("BatchWrite 1000 items", "elapsed", time.Since(batchWriteStart), "numItems", numItems)
 
 			placeholders = []string{}
 			queryArgs = []interface{}{}
