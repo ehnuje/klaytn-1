@@ -214,7 +214,7 @@ func (b *rdbBatch) Write() error {
 	}
 	start := time.Now()
 	defer func() {
-		logger.Info("BatchWrite", "elapsed", time.Since(start), "size", b.size, "numItems", len(b.batchItems))
+		logger.Info("BatchWriteTotal", "elapsed", time.Since(start), "size", b.size, "numItems", len(b.batchItems))
 	}()
 
 	var placeholders []string
@@ -233,7 +233,7 @@ func (b *rdbBatch) Write() error {
 	//	}
 	//}()
 
-	maxBatchSize := 1000
+	maxBatchSize := 2000
 
 	for _, item := range b.batchItems {
 		numItems++
@@ -261,7 +261,7 @@ func (b *rdbBatch) Write() error {
 				return err
 			}
 
-			logger.Info("BatchWrite 1000 items", "elapsed", time.Since(batchWriteStart), "numItems", numItems)
+			logger.Info("BatchWrite 2000 items", "elapsed", time.Since(batchWriteStart), "numItems", numItems)
 
 			placeholders = []string{}
 			queryArgs = []interface{}{}
@@ -273,6 +273,10 @@ func (b *rdbBatch) Write() error {
 		return nil
 	}
 
+	startRemaining := time.Now()
+	defer func() {
+		logger.Info("BatchWrite Remainings", "elapsed", time.Since(startRemaining), "numItems", numItems)
+	}()
 	var query string
 	switch b.db.Dialect().GetName() {
 	case mysqlDialect:
