@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
@@ -21,12 +22,15 @@ const mysqlDialect = "mysql"
 const sqliteDialect = "sqlite3"
 
 type rdb struct {
-	db     *gorm.DB
-	logger log.Logger
+	db           *gorm.DB
+	sqlDB        *sql.DB
+	preparedStmt *sql.Stmt
+	logger       log.Logger
 }
 
 func newRelationalDatabase(endpoint, dialect string) (*rdb, error) {
 	var db *gorm.DB
+	var sqlDB *sql.DB
 	var err error
 
 	switch dialect {
@@ -35,6 +39,15 @@ func newRelationalDatabase(endpoint, dialect string) (*rdb, error) {
 		password := "root"
 		endpoint = fmt.Sprintf("%s:%s@/test", id, password)
 		db, err = openMySQL(endpoint)
+
+		sqlDB, err = sql.Open("mysql", endpoint)
+		if err != nil {
+			logger.Error("failed to open database", "err", err)
+		}
+		_, err = sqlDB.Exec("USE test")
+		if err != nil {
+			logger.Error("failed to set database", "err", err)
+		}
 		setMySQLDatabase(db)
 	case sqliteDialect:
 		db, err = gorm.Open("sqlite3", ":memory:")
@@ -55,7 +68,7 @@ func newRelationalDatabase(endpoint, dialect string) (*rdb, error) {
 
 	logger.Info("")
 	db.Exec("USE test")
-	return &rdb{db: db, logger: logger.NewWith("", "")}, nil
+	return &rdb{db: db, sqlDB: sqlDB, logger: logger.NewWith("", "")}, nil
 }
 
 func openMySQL(endpoint string) (*gorm.DB, error) {
@@ -95,10 +108,6 @@ func setMySQLDatabase(mysql *gorm.DB) error {
 	}
 
 	if err := mysql.Exec("SET profiling = 1").Error; err != nil {
-		return err
-	}
-
-	if err := mysql.Exec("SET STATISTICS IO ON").Error; err != nil {
 		return err
 	}
 	return nil
@@ -172,6 +181,7 @@ func (rdb *rdb) Close() {
 func (rdb *rdb) NewBatch() Batch {
 	return &rdbBatch{
 		db:         rdb.db,
+		rdb:        rdb,
 		batchItems: []*KeyValueModel{},
 		size:       0,
 	}
@@ -187,6 +197,7 @@ func (rdb *rdb) Meter(prefix string) {
 
 type rdbBatch struct {
 	db         *gorm.DB
+	rdb        *rdb
 	batchItems []*KeyValueModel
 	size       int
 }
@@ -222,8 +233,8 @@ func (b *rdbBatch) Write() error {
 	//	}
 	//}()
 
-	first := true
-	maxBatchSize := 250
+	maxBatchSize := 1000
+
 	for _, item := range b.batchItems {
 		numItems++
 
@@ -231,20 +242,26 @@ func (b *rdbBatch) Write() error {
 		queryArgs = append(queryArgs, item.Key)
 		queryArgs = append(queryArgs, item.Val)
 
-		if (first && numItems >= 100) || numItems >= maxBatchSize {
-			first = false
-			concatenatedPlaceholders := strings.Join(placeholders, ",")
-			query := fmt.Sprintf(mysqlBatchQuery, concatenatedPlaceholders)
+		if numItems >= maxBatchSize {
+			if b.rdb.preparedStmt == nil {
+				concatenatedPlaceholders := strings.Join(placeholders, ",")
+				query := fmt.Sprintf(mysqlBatchQuery, concatenatedPlaceholders)
+
+				stmt, err := b.rdb.sqlDB.Prepare(query)
+				if err != nil {
+					logger.Error("Error while prepare query", "err", err)
+				}
+				b.rdb.preparedStmt = stmt
+			}
 
 			batchWriteStart := time.Now()
-			execResult := b.db.Exec(query, queryArgs...)
-			if err := execResult.Error; err != nil {
-				logger.Error("Error while batch write", "err", err, "query", query)
+			_, err := b.rdb.preparedStmt.Exec(queryArgs...)
+			if err != nil {
+				logger.Error("Error while batch write", "err", err)
 				return err
 			}
 
-			elapsed := time.Since(batchWriteStart)
-			logger.Info("BatchWrite 250 items", "elapsed", elapsed, "value", execResult.Value)
+			logger.Info("BatchWrite 1000 items", "elapsed", time.Since(batchWriteStart), "numItems", numItems)
 
 			placeholders = []string{}
 			queryArgs = []interface{}{}
