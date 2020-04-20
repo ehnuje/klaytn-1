@@ -223,6 +223,7 @@ func (b *rdbBatch) Write() error {
 	//}()
 
 	first := true
+	maxBatchSize := 250
 	for _, item := range b.batchItems {
 		numItems++
 
@@ -230,7 +231,7 @@ func (b *rdbBatch) Write() error {
 		queryArgs = append(queryArgs, item.Key)
 		queryArgs = append(queryArgs, item.Val)
 
-		if (first && numItems >= 100) || numItems >= 1000 {
+		if (first && numItems >= 100) || numItems >= maxBatchSize {
 			first = false
 			concatenatedPlaceholders := strings.Join(placeholders, ",")
 			query := fmt.Sprintf(mysqlBatchQuery, concatenatedPlaceholders)
@@ -243,7 +244,7 @@ func (b *rdbBatch) Write() error {
 			}
 
 			elapsed := time.Since(batchWriteStart)
-			logger.Info("BatchWrite 1000 items", "elapsed", elapsed, "value", execResult.Value)
+			logger.Info("BatchWrite 250 items", "elapsed", elapsed, "value", execResult.Value)
 
 			placeholders = []string{}
 			queryArgs = []interface{}{}
