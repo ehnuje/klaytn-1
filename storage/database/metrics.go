@@ -50,4 +50,6 @@ var (
 
 	cacheGetCanonicalHashMissMeter = metrics.NewRegisteredMeter("klay/cache/get/canonicalhash/miss", nil)
 	cacheGetCanonicalHashHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/canonicalhash/hit", nil)
+
+	relationalDBBatchWriteMeter = metrics.NewRegisteredMeter("klay/rdb/batch/write", nil)
 )

@@ -261,7 +261,9 @@ func (b *rdbBatch) Write() error {
 				return err
 			}
 
-			logger.Info("BatchWrite 1000 items", "elapsed", time.Since(batchWriteStart), "numItems", numItems)
+			writeTime := time.Since(batchWriteStart)
+			logger.Info("BatchWrite 1000 items", "elapsed", writeTime, "numItems", numItems)
+			relationalDBBatchWriteMeter.Mark(int64(writeTime / 1000.0))
 
 			placeholders = []string{}
 			queryArgs = []interface{}{}
@@ -275,7 +277,9 @@ func (b *rdbBatch) Write() error {
 
 	startRemaining := time.Now()
 	defer func() {
-		logger.Info("BatchWrite Remainings", "elapsed", time.Since(startRemaining), "numItems", numItems)
+		writeRemainingTime := time.Since(startRemaining)
+		logger.Info("BatchWrite Remainings", "elapsed", writeRemainingTime, "numItems", numItems)
+		relationalDBBatchWriteMeter.Mark(int64(writeRemainingTime / 1000.0))
 	}()
 	var query string
 	switch b.db.Dialect().GetName() {
