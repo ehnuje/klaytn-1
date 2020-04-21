@@ -94,16 +94,16 @@ func openMySQL(endpoint string) (*gorm.DB, error) {
 
 func setMySQLDatabase(mysql *gorm.DB) error {
 	//Drop previous test database if possible.
-	if err := mysql.Exec("DROP DATABASE test").Error; err != nil {
-		if !strings.Contains(err.Error(), "database doesn't exist") {
-			logger.Error("Error while dropping the database test", "err", err)
-		}
-	}
-	// Create new test database.
-	if err := mysql.Exec("CREATE DATABASE test DEFAULT CHARACTER SET UTF8").Error; err != nil {
-		logger.Error("Error while ")
-		return err
-	}
+	//if err := mysql.Exec("DROP DATABASE test").Error; err != nil {
+	//	if !strings.Contains(err.Error(), "database doesn't exist") {
+	//		logger.Error("Error while dropping the database test", "err", err)
+	//	}
+	//}
+	//// Create new test database.
+	//if err := mysql.Exec("CREATE DATABASE test DEFAULT CHARACTER SET UTF8").Error; err != nil {
+	//	logger.Error("Error while ")
+	//	return err
+	//}
 	// Use test database
 	if err := mysql.Exec("USE test").Error; err != nil {
 		return err
