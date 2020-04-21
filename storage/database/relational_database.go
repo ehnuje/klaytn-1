@@ -38,6 +38,7 @@ func newRelationalDatabase(endpoint, dialect string) (*rdb, error) {
 		id := "root"
 		password := "rootroot"
 		endpoint = fmt.Sprintf("%s:%s@tcp(melvin-kes-dev.cluster-cnuopt13avbx.ap-northeast-2.rds.amazonaws.com:3306)/test", id, password)
+		logger.Info("endpoint", "ep", endpoint)
 		db, err = openMySQL(endpoint)
 		setMySQLDatabase(db)
 
@@ -62,15 +63,16 @@ func newRelationalDatabase(endpoint, dialect string) (*rdb, error) {
 
 	//db.LogMode(true)
 
+	logger.Info("")
+	if err := db.Exec("USE test").Error; err != nil {
+		logger.Error("Failed to use test", "err", err)
+	}
+
 	err = db.AutoMigrate(&KeyValueModel{}).Error
 	if err != nil {
 		return nil, err
 	}
 
-	logger.Info("")
-	if err := db.Exec("USE test").Error; err != nil {
-		logger.Error("Failed to use test", "err", err)
-	}
 	return &rdb{db: db, sqlDB: sqlDB, logger: logger.NewWith("", "")}, nil
 }
 
