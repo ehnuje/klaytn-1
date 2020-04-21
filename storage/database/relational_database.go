@@ -68,7 +68,9 @@ func newRelationalDatabase(endpoint, dialect string) (*rdb, error) {
 	}
 
 	logger.Info("")
-	db.Exec("USE test")
+	if err := db.Exec("USE test").Error; err != nil {
+		logger.Error("Failed to use test", "err", err)
+	}
 	return &rdb{db: db, sqlDB: sqlDB, logger: logger.NewWith("", "")}, nil
 }
 
@@ -100,10 +102,9 @@ func setMySQLDatabase(mysql *gorm.DB) error {
 	//	}
 	//}
 	//// Create new test database.
-	//if err := mysql.Exec("CREATE DATABASE test DEFAULT CHARACTER SET UTF8").Error; err != nil {
-	//	logger.Error("Error while ")
-	//	return err
-	//}
+	if err := mysql.Exec("CREATE DATABASE test DEFAULT CHARACTER SET UTF8").Error; err != nil {
+		logger.Error("Error while creating database", "err", err)
+	}
 	// Use test database
 	if err := mysql.Exec("USE test").Error; err != nil {
 		return err
