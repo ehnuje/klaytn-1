@@ -36,8 +36,8 @@ func newRelationalDatabase(endpoint, dialect string) (*rdb, error) {
 	switch dialect {
 	case mysqlDialect:
 		id := "root"
-		password := "root"
-		endpoint = fmt.Sprintf("%s:%s@/test", id, password)
+		password := "rootroot"
+		endpoint = fmt.Sprintf("%s:%s@tcp(melvin-kes-dev.cluster-cnuopt13avbx.ap-northeast-2.rds.amazonaws.com:3306)/mysql", id, password)
 		db, err = openMySQL(endpoint)
 
 		sqlDB, err = sql.Open("mysql", endpoint)
@@ -93,23 +93,23 @@ func openMySQL(endpoint string) (*gorm.DB, error) {
 
 func setMySQLDatabase(mysql *gorm.DB) error {
 	//Drop previous test database if possible.
-	//if err := mysql.Exec("DROP DATABASE test").Error; err != nil {
-	//	if !strings.Contains(err.Error(), "database doesn't exist") {
-	//		return err
-	//	}
-	//}
-	//// Create new test database.
-	//if err := mysql.Exec("CREATE DATABASE test DEFAULT CHARACTER SET UTF8").Error; err != nil {
-	//	return err
-	//}
+	if err := mysql.Exec("DROP DATABASE test").Error; err != nil {
+		if !strings.Contains(err.Error(), "database doesn't exist") {
+			return err
+		}
+	}
+	// Create new test database.
+	if err := mysql.Exec("CREATE DATABASE test DEFAULT CHARACTER SET UTF8").Error; err != nil {
+		return err
+	}
 	// Use test database
 	if err := mysql.Exec("USE test").Error; err != nil {
 		return err
 	}
 
-	if err := mysql.Exec("SET profiling = 1").Error; err != nil {
-		return err
-	}
+	//if err := mysql.Exec("SET profiling = 1").Error; err != nil {
+	//	return err
+	//}
 	return nil
 }
 
