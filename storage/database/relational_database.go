@@ -39,6 +39,7 @@ func newRelationalDatabase(endpoint, dialect string) (*rdb, error) {
 		password := "rootroot"
 		endpoint = fmt.Sprintf("%s:%s@tcp(melvin-kes-dev.cluster-cnuopt13avbx.ap-northeast-2.rds.amazonaws.com:3306)/mysql", id, password)
 		db, err = openMySQL(endpoint)
+		setMySQLDatabase(db)
 
 		sqlDB, err = sql.Open("mysql", endpoint)
 		if err != nil {
@@ -48,7 +49,7 @@ func newRelationalDatabase(endpoint, dialect string) (*rdb, error) {
 		if err != nil {
 			logger.Error("failed to set database", "err", err)
 		}
-		setMySQLDatabase(db)
+
 	case sqliteDialect:
 		db, err = gorm.Open("sqlite3", ":memory:")
 	default:
@@ -95,11 +96,12 @@ func setMySQLDatabase(mysql *gorm.DB) error {
 	//Drop previous test database if possible.
 	if err := mysql.Exec("DROP DATABASE test").Error; err != nil {
 		if !strings.Contains(err.Error(), "database doesn't exist") {
-			return err
+			logger.Error("Error while dropping the database test", "err", err)
 		}
 	}
 	// Create new test database.
 	if err := mysql.Exec("CREATE DATABASE test DEFAULT CHARACTER SET UTF8").Error; err != nil {
+		logger.Error("Error while ")
 		return err
 	}
 	// Use test database
