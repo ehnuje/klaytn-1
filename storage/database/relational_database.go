@@ -37,7 +37,7 @@ func newRelationalDatabase(endpoint, dialect string) (*rdb, error) {
 	case mysqlDialect:
 		id := "root"
 		password := "rootroot"
-		endpoint = fmt.Sprintf("%s:%s@tcp(melvin-kes-dev.cluster-cnuopt13avbx.ap-northeast-2.rds.amazonaws.com:3306)/mysql", id, password)
+		endpoint = fmt.Sprintf("%s:%s@tcp(melvin-kes-dev.cluster-cnuopt13avbx.ap-northeast-2.rds.amazonaws.com:3306)/test", id, password)
 		db, err = openMySQL(endpoint)
 		setMySQLDatabase(db)
 
