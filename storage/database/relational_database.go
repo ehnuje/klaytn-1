@@ -244,7 +244,7 @@ func (b *rdbBatch) Write() error {
 	//	}
 	//}()
 
-	maxBatchSize := 1000
+	maxBatchSize := 750
 	writeSize := 0
 
 	for _, item := range b.batchItems {
@@ -275,8 +275,8 @@ func (b *rdbBatch) Write() error {
 			}
 
 			writeTime := time.Since(batchWriteStart)
-			logger.Info("BatchWrite 1000 items", "elapsed", writeTime, "numItems", numItems, "writeSize", writeSize)
-			relationalDBBatchWriteMeter.Mark(int64(writeTime / 1000.0))
+			logger.Info("BatchWrite 750 items", "elapsed", writeTime, "numItems", numItems, "writeSize", writeSize)
+			relationalDBBatchWriteMeter.Mark(int64(writeTime / 750.0))
 
 			placeholders = []string{}
 			queryArgs = []interface{}{}
