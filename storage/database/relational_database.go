@@ -37,12 +37,18 @@ func newRelationalDatabase(endpoint, dialect string) (*rdb, error) {
 	case mysqlDialect:
 		id := "root"
 		password := "rootroot"
-		endpoint = fmt.Sprintf("%s:%s@tcp(melvin-kes-dev.cluster-cnuopt13avbx.ap-northeast-2.rds.amazonaws.com:3306)/test", id, password)
+		endpoint = fmt.Sprintf("%s:%s@tcp(kes-melvin-test-mysql.cnuopt13avbx.ap-northeast-2.rds.amazonaws.com:3306)/mysql", id, password)
 		logger.Info("endpoint", "ep", endpoint)
 		db, err = openMySQL(endpoint)
 		setMySQLDatabase(db)
 
-		sqlDB, err = sql.Open("mysql", endpoint)
+		endpoint2 := fmt.Sprintf("%s:%s@tcp(kes-melvin-test-mysql.cnuopt13avbx.ap-northeast-2.rds.amazonaws.com:3306)/test", id, password)
+		db, err = openMySQL(endpoint2)
+		if err := db.Exec("USE test").Error; err != nil {
+			return nil, err
+		}
+
+		sqlDB, err = sql.Open("mysql", endpoint2)
 		if err != nil {
 			logger.Error("failed to open database", "err", err)
 		}
