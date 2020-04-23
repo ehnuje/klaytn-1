@@ -157,6 +157,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 
 	// Just commit the new block if there is no stored genesis block.
 	stored := db.ReadCanonicalHash(0)
+	logger.Info("stored canonical hash", "hash", stored.String())
 	if (stored == common.Hash{}) {
 		if genesis == nil {
 			switch {
@@ -272,8 +273,22 @@ func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 	if g.BlockScore == nil {
 		head.BlockScore = params.GenesisBlockScore
 	}
-	stateDB.Commit(false)
-	stateDB.Database().TrieDB().Commit(root, true, statedb.NoDataArchivingPreparation)
+	newRoot, err := stateDB.Commit(false)
+	if err != nil {
+		logger.Error("Error while stateDB.Commit(false)", "err", err, "newRoot", newRoot.String(), "oldRoot", root.String())
+	}
+
+	err = stateDB.Database().TrieDB().Commit(root, true, statedb.NoDataArchivingPreparation)
+	if err != nil {
+		logger.Error("Error while stateDB.Database().TrieDB().Commit()", "err", err)
+	}
+
+	_, err = state.New(newRoot, state.NewDatabase(db))
+	if err != nil {
+		logger.Error("Failed to get a new stateDB", "err", err)
+	}
+
+	logger.Info("", "newRoot", newRoot.String(), "oldRoot", root.String())
 
 	return types.NewBlock(head, nil, nil)
 }

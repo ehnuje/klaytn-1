@@ -821,10 +821,11 @@ func (db *Database) Commit(node common.Hash, report bool, blockNum uint64) error
 	db.lock.RLock()
 
 	commitStart := time.Now()
-	if err := db.writeBatchPreimages(); err != nil {
-		db.lock.RUnlock()
-		return err
-	}
+	//if err := db.writeBatchPreimages(); err != nil {
+	//	db.lock.RUnlock()
+	//	return err
+	//}
+	//logger.Error("Write preimages")
 
 	// Move the trie itself into the batch, flushing if enough data is accumulated
 	numNodes, nodesSize := len(db.nodes), db.nodesSize

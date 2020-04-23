@@ -21,7 +21,7 @@ func newTestRelationalDB() (*rdb, error) {
 	id := "root"
 	password := "root"
 	endpoint := fmt.Sprintf("%s:%s@/test", id, password)
-	db, err := openMySQL(endpoint)
+	db, err := openDatabase(postgresDialect, endpoint)
 
 	if err != nil {
 		return nil, err

@@ -1,0 +1,31 @@
+=============== Apr 27, 2020 (KST) ===============
+08:41:18.117444 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+08:41:18.176983 db@open opening
+08:41:18.183363 version@stat F·[] S·0B[] Sc·[]
+08:41:18.234366 db@janitor F·2 G·0
+08:41:18.234421 db@open done T·57.398113ms
+=============== Apr 27, 2020 (KST) ===============
+08:48:29.269016 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+08:48:29.270053 version@stat F·[] S·0B[] Sc·[]
+08:48:29.270098 db@open opening
+08:48:29.270201 journal@recovery F·1
+08:48:29.270358 journal@recovery recovering @1
+08:48:29.274478 memdb@flush created L0@2 N·8 S·440B "n:\x18..ail,v6":"version,v1"
+08:48:29.274771 version@stat F·[1] S·440B[440B] Sc·[0.25]
+08:48:29.312664 db@janitor F·3 G·0
+08:48:29.312710 db@open done T·42.588522ms
+=============== Apr 27, 2020 (KST) ===============
+09:42:30.246648 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+09:42:30.249116 version@stat F·[1] S·440B[440B] Sc·[0.25]
+09:42:30.249162 db@open opening
+09:42:30.249266 journal@recovery F·1
+09:42:30.249413 journal@recovery recovering @3
+09:42:30.258166 memdb@flush created L0@5 N·75 S·3KiB "n:\f..ing,v40":"n:\xff..ong,v73"
+09:42:30.258471 version@stat F·[2] S·3KiB[3KiB] Sc·[0.50]
+09:42:30.281965 db@janitor F·4 G·0
+09:42:30.282008 db@open done T·32.828903ms
+09:42:30.407850 table@compaction L0·2 -> L1·0 S·3KiB Q·118
+09:42:30.417093 table@build created L1@8 N·78 S·3KiB "n:\f..ing,v40":"version,v1"
+09:42:30.417153 version@stat F·[0 1] S·3KiB[0B 3KiB] Sc·[0.00 0.00]
+09:42:30.423881 table@compaction committed F-1 S-402B Ke·0 D·5 T·15.98176ms
+09:42:30.428380 table@remove removed @2
