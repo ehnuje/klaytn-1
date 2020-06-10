@@ -2084,6 +2084,9 @@ func (bc *BlockChain) ApplyTransaction(config *params.ChainConfig, author *commo
 	*/
 
 	blockNumber := header.Number.Uint64()
+	if cfg.Debug {
+		cfg.Tracer = vm.NewStructLogger(nil)
+	}
 
 	// validation for each transaction before execution
 	if err := tx.Validate(statedb, blockNumber); err != nil {
@@ -2108,6 +2111,12 @@ func (bc *BlockChain) ApplyTransaction(config *params.ChainConfig, author *commo
 	// Update the state with pending changes
 	statedb.Finalise(true, false)
 	*usedGas += gas
+
+	tracer, converted := cfg.Tracer.(*vm.StructLogger)
+	if converted {
+		logs := tracer.StructLogs()
+		logger.Info("", "len(log)", len(logs))
+	}
 
 	receipt := types.NewReceipt(kerr.Status, tx.Hash(), gas)
 	// if the transaction created a contract, store the creation address in the receipt.

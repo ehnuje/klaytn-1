@@ -770,6 +770,7 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message blockchain.Mess
 		tracer = vm.NewStructLogger(nil)
 
 	default:
+		logger.Info("generated a NewStructLogger")
 		tracer = vm.NewStructLogger(config.LogConfig)
 	}
 	// Run the transaction with tracing enabled.

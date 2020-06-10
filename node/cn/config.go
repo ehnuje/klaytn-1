@@ -118,8 +118,8 @@ type Config struct {
 	// Gas Price Oracle options
 	GPO gasprice.Config
 
-	// Enables tracking of SHA3 preimages in the VM
-	EnablePreimageRecording bool
+	EnableVMTracer          bool // Enables VM tracer to collect VM execution logs
+	EnablePreimageRecording bool // Enables tracking of SHA3 preimages in the VM
 	// Istanbul options
 	Istanbul istanbul.Config
 

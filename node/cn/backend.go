@@ -247,7 +247,9 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	}
 	var (
-		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
+		vmConfig = vm.Config{
+			Debug:                   config.EnableVMTracer,
+			EnablePreimageRecording: config.EnablePreimageRecording}
 		cacheConfig = &blockchain.CacheConfig{StateDBCaching: config.StateDBCaching,
 			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval,
 			TxPoolStateCache: config.TxPoolStateCache, TrieCacheLimit: config.TrieCacheLimit,

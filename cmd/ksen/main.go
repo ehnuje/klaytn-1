@@ -171,6 +171,7 @@ var senHelpFlagGroups = []utils.FlagGroup{
 	{
 		Name: "VIRTUAL MACHINE",
 		Flags: []cli.Flag{
+			utils.VMEnableTracer,
 			utils.VMEnableDebugFlag,
 			utils.VMLogTargetFlag,
 		},

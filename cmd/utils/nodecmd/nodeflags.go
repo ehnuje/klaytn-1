@@ -78,6 +78,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.NetrestrictFlag,
 	utils.NodeKeyFileFlag,
 	utils.NodeKeyHexFlag,
+	utils.VMEnableTracer,
 	utils.VMEnableDebugFlag,
 	utils.VMLogTargetFlag,
 	utils.NetworkIdFlag,

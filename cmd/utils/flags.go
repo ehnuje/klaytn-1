@@ -309,13 +309,17 @@ var (
 		Usage: "Password file to use for non-interactive password input",
 		Value: "",
 	}
-
+	// VM related flags
+	VMEnableTracer = cli.BoolFlag{
+		Name:  "vm.enable-tracer",
+		Usage: "Enable VM tracer to collect VM execution logs",
+	}
 	VMEnableDebugFlag = cli.BoolFlag{
-		Name:  "vmdebug",
-		Usage: "Record information useful for VM and contract debugging",
+		Name:  "vm.record-preimage",
+		Usage: "Record preimage of data useful for VM and contract debugging",
 	}
 	VMLogTargetFlag = cli.IntFlag{
-		Name:  "vmlog",
+		Name:  "vm.log-target",
 		Usage: "Set the output target of vmlog precompiled contract (0: no output, 1: file, 2: stdout, 3: both)",
 		Value: 0,
 	}
@@ -1169,10 +1173,8 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.StateDBCaching = ctx.GlobalIsSet(StateDBCachingFlag.Name)
 	cfg.TrieCacheLimit = ctx.GlobalInt(TrieCacheLimitFlag.Name)
 
-	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
-		// TODO(fjl): force-enable this in --dev mode
-		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
-	}
+	cfg.EnableVMTracer = ctx.GlobalIsSet(VMEnableTracer.Name)
+	cfg.EnablePreimageRecording = ctx.GlobalIsSet(VMEnableDebugFlag.Name)
 	if ctx.GlobalIsSet(VMLogTargetFlag.Name) {
 		if _, err := debug.Handler.SetVMLogTarget(ctx.GlobalInt(VMLogTargetFlag.Name)); err != nil {
 			logger.Warn("Incorrect vmlog value", "err", err)
