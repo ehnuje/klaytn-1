@@ -103,7 +103,10 @@
 				gasIn:   log.getGas(),
 				gasCost: log.getCost(),
 				outOff:  log.stack.peek(4 + off).valueOf(),
-				outLen:  log.stack.peek(5 + off).valueOf()
+				outLen:  log.stack.peek(5 + off).valueOf(),
+
+				inOff: inOff,
+				inEnd: inEnd,
 			};
 			if (op != 'DELEGATECALL' && op != 'STATICCALL') {
 				call.value = '0x' + log.stack.peek(2).toString(16);

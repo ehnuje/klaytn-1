@@ -83,7 +83,7 @@ func (s *InternalCall) ErrorString() string {
 // InternalTxTraceResult is returned data after the end of trace-collecting cycle.
 // It implements an object returned by "result" function at call_tracer.js
 type InternalTxTraceResult struct {
-	CallType vm.OpCode
+	CallType string
 	From     common.Address
 	To       common.Address
 	Value    string
@@ -104,9 +104,9 @@ type RevertedInfo struct {
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
 func (this *InternalTxTracer) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
-	this.ctx["type"] = vm.CALL
+	this.ctx["type"] = vm.CALL.String()
 	if create {
-		this.ctx["type"] = vm.CREATE
+		this.ctx["type"] = vm.CREATE.String()
 	}
 	this.ctx["from"] = from
 	this.ctx["to"] = to
@@ -210,12 +210,25 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		inOff := log.stack.Back(2 + off)
 		inEnd := big.NewInt(0).Add(inOff, log.stack.Back(3+off)).Int64()
 
+		input := ""
+
+		logger.Error("",
+			"inOff", inOff.Uint64(),
+			"inEnd", inEnd, "len(log.memory.Store)", len(log.memory.Store))
+		if int(inOff.Int64()) >= len(log.memory.Store) {
+			input = ""
+		} else if int(inEnd) >= len(log.memory.Store) {
+			input = hexutil.Encode(log.memory.Store[inOff.Int64():len(log.memory.Store) - 1])
+		} else {
+			input =  hexutil.Encode(log.memory.Store[inOff.Int64():inEnd])
+		}
+
 		// Assemble the internal call report and store for completion
 		call := &InternalCall{
 			Type:    op,
 			From:    log.contract.Address(),
 			To:      toAddr,
-			Input:   hexutil.Encode(log.memory.Store[inOff.Int64():inEnd]),
+			Input:   input,
 			GasIn:   log.gas,
 			GasCost: log.cost,
 			OutOff:  big.NewInt(log.stack.Back(4 + off).Int64()),
@@ -359,7 +372,7 @@ func (this *InternalTxTracer) reset() {
 // the final result of the tracing.
 func (this *InternalTxTracer) result() (*InternalTxTraceResult, error) {
 	if _, exist := this.ctx["type"]; !exist {
-		this.ctx["type"] = vm.OpCode(0)
+		this.ctx["type"] = vm.OpCode(0).String()
 	}
 	if _, exist := this.ctx["from"]; !exist {
 		this.ctx["from"] = common.Address{}
@@ -389,7 +402,7 @@ func (this *InternalTxTracer) result() (*InternalTxTraceResult, error) {
 		this.callStack = []*InternalCall{{}}
 	}
 	result := &InternalTxTraceResult{
-		CallType: this.ctx["type"].(vm.OpCode),
+		CallType: this.ctx["type"].(string),
 		From:     this.ctx["from"].(common.Address),
 		To:       this.ctx["to"].(common.Address),
 		Value:    "0x" + this.ctx["value"].(*big.Int).Text(16),
@@ -399,6 +412,7 @@ func (this *InternalTxTracer) result() (*InternalTxTraceResult, error) {
 		Output:   this.ctx["output"].(string),
 		Time:     this.ctx["time"].(time.Duration),
 	}
+	logger.Error("", "this.callStack[0].calls", len(this.callStack[0].calls))
 	if this.callStack[0].calls != nil {
 		result.Calls = this.callStack[0].calls
 	}
