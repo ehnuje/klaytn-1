@@ -185,6 +185,8 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 	}
 	// If a contract is being self destructed, gather that as a subcall too
 	if sysCall && op == vm.SELFDESTRUCT {
+		logger.Error("sysCall && op == vm.SELFDESTRUCT")
+
 		left := this.callStackLength()
 		if this.callStack[left-1] == nil {
 			this.callStack[left-1] = &InternalCall{}
@@ -412,9 +414,11 @@ func (this *InternalTxTracer) result() (*InternalTxTraceResult, error) {
 		Output:   this.ctx["output"].(string),
 		Time:     this.ctx["time"].(time.Duration),
 	}
-	logger.Error("", "this.callStack[0].calls", len(this.callStack[0].calls))
+	logger.Error("",
+		"this.callStack[0].calls", len(this.callStack[0].calls),
+		)
 	if this.callStack[0].calls != nil {
-		result.Calls = this.callStack[0].calls
+		result.Calls = this.callStack
 	}
 	if this.callStack[0].Err != nil {
 		result.Error = this.callStack[0].Err
