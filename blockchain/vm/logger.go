@@ -152,7 +152,7 @@ func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost ui
 		l.changedValues[contract.Address()] = make(Storage)
 	}
 
-	// capture SSTORE opcodes and determine the changed value and store
+	// capture SSTORE opcodes and determine the changed value and Store
 	// it in the local storage container.
 	if op == SSTORE && stack.len() >= 2 {
 		var (

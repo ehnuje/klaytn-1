@@ -1,9 +1,9 @@
-package vm
+package tracers
 
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"math/big"
@@ -20,7 +20,7 @@ var emptyAddr = common.Address{}
 // the internal calls made by a transaction, along with any useful information.
 // It is ported to golang from JS, specifically call_tracer.js
 type InternalTxTracer struct {
-	cfg LogConfig
+	cfg vm.LogConfig
 
 	callStack []*InternalCall
 	output    []byte
@@ -36,7 +36,7 @@ type InternalTxTracer struct {
 }
 
 // NewInternalTxLogger returns a new InternalTxTracer
-func NewInternalTxLogger(cfg *LogConfig) *InternalTxTracer {
+func NewInternalTxLogger(cfg *vm.LogConfig) *InternalTxTracer {
 	logger := &InternalTxTracer{
 		callStack: []*InternalCall{},
 		ctx:       map[string]interface{}{},
@@ -50,7 +50,7 @@ func NewInternalTxLogger(cfg *LogConfig) *InternalTxTracer {
 // InternalCall is emitted to the EVM each cycle and lists information about the current internal state
 // prior to the execution of the statement.
 type InternalCall struct {
-	Type    OpCode         `json:"op"`
+	Type    vm.OpCode      `json:"op"`
 	From    common.Address `json:"from"`
 	To      common.Address `json:"to"`
 	Input   string
@@ -83,7 +83,7 @@ func (s *InternalCall) ErrorString() string {
 // InternalTxTraceResult is returned data after the end of trace-collecting cycle.
 // It implements an object returned by "result" function at call_tracer.js
 type InternalTxTraceResult struct {
-	CallType OpCode
+	CallType vm.OpCode
 	From     common.Address
 	To       common.Address
 	Value    string
@@ -104,9 +104,9 @@ type RevertedInfo struct {
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
 func (this *InternalTxTracer) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
-	this.ctx["type"] = "CALL"
+	this.ctx["type"] = vm.CALL
 	if create {
-		this.ctx["type"] = "CREATE"
+		this.ctx["type"] = vm.CREATE
 	}
 	this.ctx["from"] = from
 	this.ctx["to"] = to
@@ -120,20 +120,20 @@ func (this *InternalTxTracer) CaptureStart(from common.Address, to common.Addres
 // tracerLog is used to help comparing codes between this and call_tracer.js
 // by following the conventions used in call_tracer.js
 type tracerLog struct {
-	env      *EVM
+	env      *vm.EVM
 	pc       uint64
-	op       OpCode
+	op       vm.OpCode
 	gas      uint64
 	cost     uint64
-	memory   *Memory
-	stack    *Stack
-	contract *Contract
+	memory   *vm.Memory
+	stack    *vm.Stack
+	contract *vm.Contract
 	depth    int
 	err      error
 }
 
 // CaptureState implements the Tracer interface to trace a single step of VM execution.
-func (this *InternalTxTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, logStack *Stack, contract *Contract, depth int, err error) error {
+func (this *InternalTxTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, logStack *vm.Stack, contract *vm.Contract, depth int, err error) error {
 	if this.err == nil {
 		// Initialize the context if it wasn't done yet
 		if !this.initialized {
@@ -166,7 +166,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 	sysCall := (log.op & 0xf0) == 0xf0
 	op := log.op
 	// If a new contract is being created, add to the call stack
-	if sysCall && (op == CREATE || op == CREATE2) {
+	if sysCall && (op == vm.CREATE || op == vm.CREATE2) {
 		inOff := log.stack.Back(1)
 		inEnd := big.NewInt(0).Add(inOff, log.stack.Back(2)).Int64()
 
@@ -174,17 +174,17 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		call := &InternalCall{
 			Type:    op,
 			From:    log.contract.Address(),
-			Input:   hexutil.Encode(log.memory.store[inOff.Int64():inEnd]),
+			Input:   hexutil.Encode(log.memory.Store[inOff.Int64():inEnd]),
 			Gas:     log.gas,
 			GasCost: log.cost,
-			Value:   "0x" + log.stack.peek().Text(16), // '0x' + tracerLog.stack.peek(0).toString(16)
+			Value:   "0x" + log.stack.Peek().Text(16), // '0x' + tracerLog.stack.peek(0).toString(16)
 		}
 		this.callStack = append(this.callStack, call)
 		this.descended = true
 		return nil
 	}
 	// If a contract is being self destructed, gather that as a subcall too
-	if sysCall && op == SELFDESTRUCT {
+	if sysCall && op == vm.SELFDESTRUCT {
 		left := this.callStackLength()
 		if this.callStack[left-1] == nil {
 			this.callStack[left-1] = &InternalCall{}
@@ -196,14 +196,14 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		return nil
 	}
 	// If a new method invocation is being done, add to the call stack
-	if sysCall && (op == CALL || op == CALLCODE || op == DELEGATECALL || op == STATICCALL) {
+	if sysCall && (op == vm.CALL || op == vm.CALLCODE || op == vm.DELEGATECALL || op == vm.STATICCALL) {
 		// Skip any pre-compile invocations, those are just fancy opcodes
 		toAddr := common.HexToAddress(log.stack.Back(1).String())
 		if common.IsPrecompiledContractAddress(toAddr) {
 			return nil
 		}
 		off := 1
-		if op == DELEGATECALL || op == STATICCALL {
+		if op == vm.DELEGATECALL || op == vm.STATICCALL {
 			off = 0
 		}
 
@@ -215,13 +215,13 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 			Type:    op,
 			From:    log.contract.Address(),
 			To:      toAddr,
-			Input:   hexutil.Encode(log.memory.store[inOff.Int64():inEnd]),
+			Input:   hexutil.Encode(log.memory.Store[inOff.Int64():inEnd]),
 			GasIn:   log.gas,
 			GasCost: log.cost,
 			OutOff:  big.NewInt(log.stack.Back(4 + off).Int64()),
 			OutLen:  big.NewInt(log.stack.Back(5 + off).Int64()),
 		}
-		if op != DELEGATECALL && op != STATICCALL {
+		if op != vm.DELEGATECALL && op != vm.STATICCALL {
 			call.Value = "0x" + log.stack.Back(2).Text(16)
 		}
 		this.callStack = append(this.callStack, call)
@@ -242,7 +242,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		this.descended = false
 	}
 	// If an existing call is returning, pop off the call stack
-	if sysCall && op == REVERT {
+	if sysCall && op == vm.REVERT && this.callStackLength() > 0 {
 		this.callStack[this.callStackLength()-1].Err = errExecutionReverted
 		if this.revertedContract == emptyAddr {
 			if this.callStack[this.callStackLength()-1].To == emptyAddr {
@@ -257,12 +257,12 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		// Pop off the last call and get the execution results
 		call := this.callStackPop()
 
-		if call.Type == CREATE || call.Type == CREATE2 {
+		if call.Type == vm.CREATE || call.Type == vm.CREATE2 {
 			// If the call was a CREATE, retrieve the contract address and output code
 			call.GasUsed = call.GasIn - call.GasCost - log.gas
 			call.GasIn, call.GasCost = uint64(0), uint64(0)
 
-			ret := log.stack.peek()
+			ret := log.stack.Peek()
 			if ret.Cmp(big.NewInt(0)) != 0 {
 				call.To = common.HexToAddress(ret.String())
 				call.Output = log.env.StateDB.GetCode(common.HexToAddress(ret.String()))
@@ -274,10 +274,10 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 			if call.Gas != uint64(0) {
 				call.GasUsed = call.GasIn - call.GasCost + call.Gas - log.gas
 
-				ret := log.stack.peek()
+				ret := log.stack.Peek()
 				if ret.Cmp(big.NewInt(0)) != 0 {
 					callOutOff, callOutLen := call.OutOff.Int64(), call.OutLen.Int64()
-					call.Output = log.memory.store[callOutOff : callOutOff+callOutLen]
+					call.Output = log.memory.Store[callOutOff : callOutOff+callOutLen]
 				} else if call.Err == nil {
 					call.Err = errInternalFailure // TODO(karalabe): surface these faults somehow
 				}
@@ -306,7 +306,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 
 // CaptureFault implements the Tracer interface to trace an execution fault
 // while running an opcode.
-func (this *InternalTxTracer) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, s *Stack, contract *Contract, depth int, err error) error {
+func (this *InternalTxTracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, s *vm.Stack, contract *vm.Contract, depth int, err error) error {
 	if this.err == nil {
 		// Apart from the error, everything matches the previous invocation
 		this.errValue = err.Error()
@@ -328,7 +328,7 @@ func (this *InternalTxTracer) CaptureEnd(output []byte, gasUsed uint64, t time.D
 	this.ctx["time"] = t
 
 	if err != nil {
-		this.ctx["error"] = err.Error()
+		this.ctx["error"] = err
 	}
 	return nil
 }
@@ -359,7 +359,7 @@ func (this *InternalTxTracer) reset() {
 // the final result of the tracing.
 func (this *InternalTxTracer) result() (*InternalTxTraceResult, error) {
 	if _, exist := this.ctx["type"]; !exist {
-		this.ctx["type"] = OpCode(0)
+		this.ctx["type"] = vm.OpCode(0)
 	}
 	if _, exist := this.ctx["from"]; !exist {
 		this.ctx["from"] = common.Address{}
@@ -389,7 +389,7 @@ func (this *InternalTxTracer) result() (*InternalTxTraceResult, error) {
 		this.callStack = []*InternalCall{{}}
 	}
 	result := &InternalTxTraceResult{
-		CallType: this.ctx["type"].(OpCode),
+		CallType: this.ctx["type"].(vm.OpCode),
 		From:     this.ctx["from"].(common.Address),
 		To:       this.ctx["to"].(common.Address),
 		Value:    "0x" + this.ctx["value"].(*big.Int).Text(16),
@@ -447,6 +447,9 @@ func (this *InternalTxTracer) InternalTxLogs() []*InternalCall { return this.cal
 
 // fault is invoked when the actual execution of an opcode fails.
 func (this *InternalTxTracer) fault(log *tracerLog) {
+	if this.callStackLength() == 0 {
+		return
+	}
 	// If the topmost call already reverted, don't handle the additional fault again
 	if this.callStack[this.callStackLength()-1].Err != nil {
 		return
@@ -483,16 +486,12 @@ func (this *InternalTxTracer) callStackLength() int {
 }
 
 func (this *InternalTxTracer) callStackPop() *InternalCall {
+	if this.callStackLength() == 0 {
+		return &InternalCall{}
+	}
+
 	topItem := this.callStack[this.callStackLength()-1]
 	this.callStack = this.callStack[:this.callStackLength()-2]
 	return topItem
 }
 
-func wrapError(context string, err error) error {
-	var message string
-	switch err := err.(type) {
-	default:
-		message = err.Error()
-	}
-	return fmt.Errorf("%v    in server-side tracer function '%v'", message, context)
-}

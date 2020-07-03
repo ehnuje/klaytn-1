@@ -99,7 +99,7 @@ func (c *Contract) validJumpdest(dest *big.Int) bool {
 		analysis, exist := c.jumpdests[c.CodeHash]
 		if !exist {
 			// Do the analysis and save in parent context
-			// We do not need to store it in c.analysis
+			// We do not need to Store it in c.analysis
 			analysis = codeBitmap(c.Code)
 			c.jumpdests[c.CodeHash] = analysis
 		}
