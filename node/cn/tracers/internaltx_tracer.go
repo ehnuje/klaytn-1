@@ -50,7 +50,7 @@ func NewInternalTxLogger(cfg *vm.LogConfig) *InternalTxTracer {
 // InternalCall is emitted to the EVM each cycle and lists information about the current internal state
 // prior to the execution of the statement.
 type InternalCall struct {
-	Type    vm.OpCode      `json:"op"`
+	Type    string      `json:"op"`
 	From    common.Address `json:"from"`
 	To      common.Address `json:"to"`
 	Input   string
@@ -69,7 +69,7 @@ type InternalCall struct {
 
 // OpName formats the operand name in a human-readable format.
 func (s *InternalCall) OpName() string {
-	return s.Type.String()
+	return s.Type
 }
 
 // ErrorString formats the tracerLog's error as a string.
@@ -172,7 +172,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 
 		// Assemble the internal call report and store for completion
 		call := &InternalCall{
-			Type:    op,
+			Type:    op.String(),
 			From:    log.contract.Address(),
 			Input:   hexutil.Encode(log.memory.Store[inOff.Int64():inEnd]),
 			Gas:     log.gas,
@@ -194,7 +194,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		if this.callStack[left-1].calls == nil {
 			this.callStack[left-1].calls = []*InternalCall{}
 		}
-		this.callStack = append(this.callStack, &InternalCall{Type: op})
+		this.callStack = append(this.callStack, &InternalCall{Type: op.String()})
 		return nil
 	}
 	// If a new method invocation is being done, add to the call stack
@@ -227,7 +227,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 
 		// Assemble the internal call report and store for completion
 		call := &InternalCall{
-			Type:    op,
+			Type:    op.String(),
 			From:    log.contract.Address(),
 			To:      toAddr,
 			Input:   input,
@@ -272,7 +272,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		// Pop off the last call and get the execution results
 		call := this.callStackPop()
 
-		if call.Type == vm.CREATE || call.Type == vm.CREATE2 {
+		if call.Type == vm.CREATE.String() || call.Type == vm.CREATE2.String() {
 			// If the call was a CREATE, retrieve the contract address and output code
 			call.GasUsed = call.GasIn - call.GasCost - log.gas
 			call.GasIn, call.GasCost = uint64(0), uint64(0)
