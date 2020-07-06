@@ -421,9 +421,8 @@ func (this *InternalTxTracer) result() (*InternalTxTraceResult, error) {
 	logger.Error("",
 		"this.callStack[0].calls", len(this.callStack[0].calls),
 	)
-	if this.callStack[0].calls != nil {
-		result.Calls = this.callStack
-	}
+	result.Calls = this.callStack
+	
 	if this.callStack[0].Err != nil {
 		result.Error = this.callStack[0].Err
 	} else if ctxErr, _ := this.ctx["error"]; ctxErr != nil {
