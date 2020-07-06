@@ -50,7 +50,7 @@ func NewInternalTxLogger(cfg *vm.LogConfig) *InternalTxTracer {
 // InternalCall is emitted to the EVM each cycle and lists information about the current internal state
 // prior to the execution of the statement.
 type InternalCall struct {
-	Type    string      `json:"op"`
+	Type    string         `json:"op"`
 	From    common.Address `json:"from"`
 	To      common.Address `json:"to"`
 	Input   string
@@ -220,9 +220,9 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		if int(inOff.Int64()) >= len(log.memory.Store) {
 			input = ""
 		} else if int(inEnd) >= len(log.memory.Store) {
-			input = hexutil.Encode(log.memory.Store[inOff.Int64():len(log.memory.Store) - 1])
+			input = hexutil.Encode(log.memory.Store[inOff.Int64() : len(log.memory.Store)-1])
 		} else {
-			input =  hexutil.Encode(log.memory.Store[inOff.Int64():inEnd])
+			input = hexutil.Encode(log.memory.Store[inOff.Int64():inEnd])
 		}
 
 		// Assemble the internal call report and store for completion
@@ -307,6 +307,10 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		}
 		// Inject the call into the previous one
 		left := this.callStackLength()
+		if left == 0 {
+			left = 1 // added to avoid index out of range in golang
+			this.callStack = []*InternalCall{{}}
+		}
 		if this.callStack[left-1] == nil {
 			this.callStack[left-1] = &InternalCall{}
 		}
@@ -416,7 +420,7 @@ func (this *InternalTxTracer) result() (*InternalTxTraceResult, error) {
 	}
 	logger.Error("",
 		"this.callStack[0].calls", len(this.callStack[0].calls),
-		)
+	)
 	if this.callStack[0].calls != nil {
 		result.Calls = this.callStack
 	}
@@ -512,4 +516,3 @@ func (this *InternalTxTracer) callStackPop() *InternalCall {
 	this.callStack = this.callStack[:this.callStackLength()-2]
 	return topItem
 }
-
