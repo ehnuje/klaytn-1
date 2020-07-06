@@ -200,7 +200,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 	// If a new method invocation is being done, add to the call stack
 	if sysCall && (op == vm.CALL || op == vm.CALLCODE || op == vm.DELEGATECALL || op == vm.STATICCALL) {
 		// Skip any pre-compile invocations, those are just fancy opcodes
-		toAddr := common.HexToAddress(log.stack.Back(1).String())
+		toAddr := common.HexToAddress(log.stack.Back(1).Text(16))
 		if common.IsPrecompiledContractAddress(toAddr) {
 			return nil
 		}
