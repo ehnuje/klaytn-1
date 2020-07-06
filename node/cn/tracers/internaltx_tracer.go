@@ -378,7 +378,7 @@ func (this *InternalTxTracer) reset() {
 // the final result of the tracing.
 func (this *InternalTxTracer) result() (*InternalTxTraceResult, error) {
 	if _, exist := this.ctx["type"]; !exist {
-		this.ctx["type"] = vm.OpCode(0).String()
+		//this.ctx["type"] = vm.OpCode(0).String()
 	}
 	if _, exist := this.ctx["from"]; !exist {
 		this.ctx["from"] = common.Address{}
@@ -422,7 +422,7 @@ func (this *InternalTxTracer) result() (*InternalTxTraceResult, error) {
 		"this.callStack[0].calls", len(this.callStack[0].calls),
 	)
 	result.Calls = this.callStack
-	
+
 	if this.callStack[0].Err != nil {
 		result.Error = this.callStack[0].Err
 	} else if ctxErr, _ := this.ctx["error"]; ctxErr != nil {
