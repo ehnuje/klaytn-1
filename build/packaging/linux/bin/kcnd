@@ -3,7 +3,7 @@
 BIN=$(cd "$(dirname $0)"; pwd)
 CMD_HOME=$(dirname $BIN)
 CONF=$CMD_HOME/conf
-STOP_TIMEOUT=10 # seconds to wait for a clean exit
+STOP_TIMEOUT=3600 # seconds to wait for a clean exit
 
 source $CONF/kcnd.conf
 
