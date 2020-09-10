@@ -845,9 +845,11 @@ func (bc *BlockChain) Stop() {
 			logger.Error("Dangling trie nodes after full cleanup")
 		}
 	}
+	cacheSaveStart := time.Now()
 	if err := bc.stateCache.TrieDB().SaveTrieNodeCacheToFile(); err != nil {
 		logger.Error("Failed to save trie node cache to file", "err", err)
 	}
+	logger.Info("time spent for saving cache to file", "elapsed", time.Since(cacheSaveStart))
 	logger.Info("Blockchain manager stopped")
 }
 
