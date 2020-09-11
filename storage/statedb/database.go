@@ -1146,5 +1146,5 @@ func (db *Database) SaveTrieNodeCacheToFile() error {
 	if db.trieNodeCache == nil {
 		return nil
 	}
-	return db.trieNodeCache.SaveToFile(db.diskDB.GetDBConfig().Dir, runtime.NumCPU()/2)
+	return db.trieNodeCache.SaveToFile(db.diskDB.GetDBConfig().Dir, runtime.NumCPU())
 }
