@@ -8,6 +8,7 @@ require (
 	github.com/aristanetworks/goarista v0.0.0-20191001182449-186a6201b8ef
 	github.com/aws/aws-sdk-go v1.34.0
 	github.com/cespare/cp v1.0.0
+	github.com/cespare/xxhash/v2 v2.1.1
 	github.com/clevergo/websocket v1.0.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgraph-io/badger v1.6.0

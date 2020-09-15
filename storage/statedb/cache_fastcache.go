@@ -16,7 +16,7 @@
 
 package statedb
 
-import "github.com/VictoriaMetrics/fastcache"
+import "github.com/klaytn/klaytn/fastcache"
 
 type FastCache struct {
 	cache *fastcache.Cache
