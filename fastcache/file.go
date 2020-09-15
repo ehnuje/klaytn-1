@@ -1,7 +1,9 @@
 package fastcache
 
 import (
+	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -9,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"time"
 
 	"github.com/golang/snappy"
 )
@@ -35,6 +38,50 @@ func (c *Cache) SaveToFile(filePath string) error {
 //
 // See also SaveToFile.
 func (c *Cache) SaveToFileConcurrent(filePath string, concurrency int) error {
+	ctx, _ := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	return c.SaveToFileConcurrentWithContext(filePath, concurrency, ctx)
+	// Create dir if it doesn't exist.
+	//dir := filepath.Dir(filePath)
+	//if _, err := os.Stat(dir); err != nil {
+	//	if !os.IsNotExist(err) {
+	//		return fmt.Errorf("cannot stat %q: %s", dir, err)
+	//	}
+	//	if err := os.MkdirAll(dir, 0755); err != nil {
+	//		return fmt.Errorf("cannot create dir %q: %s", dir, err)
+	//	}
+	//}
+	//
+	//// Save cache data into a temporary directory.
+	//tmpDir, err := ioutil.TempDir(dir, "fastcache.tmp.")
+	//if err != nil {
+	//	return fmt.Errorf("cannot create temporary dir inside %q: %s", dir, err)
+	//}
+	//defer func() {
+	//	if tmpDir != "" {
+	//		_ = os.RemoveAll(tmpDir)
+	//	}
+	//}()
+	//gomaxprocs := runtime.GOMAXPROCS(-1)
+	//if concurrency <= 0 || concurrency > gomaxprocs {
+	//	concurrency = gomaxprocs
+	//}
+	//if err := c.save(tmpDir, concurrency); err != nil {
+	//	return fmt.Errorf("cannot save cache data to temporary dir %q: %s", tmpDir, err)
+	//}
+	//
+	//// Remove old filePath contents, since os.Rename may return
+	//// error if filePath dir exists.
+	//if err := os.RemoveAll(filePath); err != nil {
+	//	return fmt.Errorf("cannot remove old contents at %q: %s", filePath, err)
+	//}
+	//if err := os.Rename(tmpDir, filePath); err != nil {
+	//	return fmt.Errorf("cannot move temporary dir %q to %q: %s", tmpDir, filePath, err)
+	//}
+	//tmpDir = ""
+	//return nil
+}
+
+func (c *Cache) SaveToFileConcurrentWithContext(filePath string, concurrency int, ctx context.Context) error {
 	// Create dir if it doesn't exist.
 	dir := filepath.Dir(filePath)
 	if _, err := os.Stat(dir); err != nil {
@@ -60,7 +107,7 @@ func (c *Cache) SaveToFileConcurrent(filePath string, concurrency int) error {
 	if concurrency <= 0 || concurrency > gomaxprocs {
 		concurrency = gomaxprocs
 	}
-	if err := c.save(tmpDir, concurrency); err != nil {
+	if err := c.saveWithContext(tmpDir, concurrency, ctx); err != nil && err != errContextTimeout {
 		return fmt.Errorf("cannot save cache data to temporary dir %q: %s", tmpDir, err)
 	}
 
@@ -106,6 +153,36 @@ func (c *Cache) save(dir string, workersCount int) error {
 	for i := 0; i < workersCount; i++ {
 		go func(workerNum int) {
 			results <- saveBuckets(c.buckets[:], workCh, dir, workerNum)
+		}(i)
+	}
+	// Feed workers with work
+	for i := range c.buckets[:] {
+		workCh <- i
+	}
+	close(workCh)
+
+	// Read results.
+	var err error
+	for i := 0; i < workersCount; i++ {
+		result := <-results
+		if result != nil && err == nil {
+			err = result
+		}
+	}
+	return err
+}
+
+func (c *Cache) saveWithContext(dir string, workersCount int, ctx context.Context) error {
+	if err := saveMetadata(c, dir); err != nil {
+		return err
+	}
+
+	// Save buckets by workersCount concurrent workers.
+	workCh := make(chan int, workersCount)
+	results := make(chan error)
+	for i := 0; i < workersCount; i++ {
+		go func(workerNum int) {
+			results <- saveBucketsWithContext(c.buckets[:], workCh, dir, workerNum, ctx)
 		}(i)
 	}
 	// Feed workers with work
@@ -234,6 +311,37 @@ func saveBuckets(buckets []bucket, workCh <-chan int, dir string, workerNum int)
 	}()
 	zw := snappy.NewBufferedWriter(dataFile)
 	for bucketNum := range workCh {
+		if err := writeUint64(zw, uint64(bucketNum)); err != nil {
+			return fmt.Errorf("cannot write bucketNum=%d to %q: %s", bucketNum, dataPath, err)
+		}
+		if err := buckets[bucketNum].Save(zw); err != nil {
+			return fmt.Errorf("cannot save bucket[%d] to %q: %s", bucketNum, dataPath, err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		return fmt.Errorf("cannot close snappy.Writer for %q: %s", dataPath, err)
+	}
+	return nil
+}
+
+var errContextTimeout = errors.New("spent allowed time")
+
+func saveBucketsWithContext(buckets []bucket, workCh <-chan int, dir string, workerNum int, ctx context.Context) error {
+	dataPath := fmt.Sprintf("%s/data.%d.bin", dir, workerNum)
+	dataFile, err := os.Create(dataPath)
+	if err != nil {
+		return fmt.Errorf("cannot create %q: %s", dataPath, err)
+	}
+	defer func() {
+		_ = dataFile.Close()
+	}()
+	zw := snappy.NewBufferedWriter(dataFile)
+	for bucketNum := range workCh {
+		select {
+		case <-ctx.Done():
+			return errContextTimeout
+		default:
+		}
 		if err := writeUint64(zw, uint64(bucketNum)); err != nil {
 			return fmt.Errorf("cannot write bucketNum=%d to %q: %s", bucketNum, dataPath, err)
 		}
