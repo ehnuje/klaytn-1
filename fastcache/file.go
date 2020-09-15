@@ -38,7 +38,7 @@ func (c *Cache) SaveToFile(filePath string) error {
 //
 // See also SaveToFile.
 func (c *Cache) SaveToFileConcurrent(filePath string, concurrency int) error {
-	ctx, _ := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	ctx, _ := context.WithTimeout(context.Background(), 1*time.Minute)
 	return c.SaveToFileConcurrentWithContext(filePath, concurrency, ctx)
 	// Create dir if it doesn't exist.
 	//dir := filepath.Dir(filePath)
