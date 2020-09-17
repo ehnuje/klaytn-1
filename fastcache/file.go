@@ -13,6 +13,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/klaytn/klaytn/log"
+
 	"github.com/golang/snappy"
 )
 
@@ -110,6 +112,8 @@ func (c *Cache) SaveToFileConcurrentWithContext(filePath string, concurrency int
 	}
 	if err := c.saveWithContext(tmpDir, concurrency, ctx); err != nil && err != errContextTimeout {
 		return fmt.Errorf("cannot save cache data to temporary dir %q: %s", tmpDir, err)
+	} else if err == errContextTimeout {
+		log.NewModuleLogger(1).Warn("return due to timeout")
 	}
 
 	// Remove old filePath contents, since os.Rename may return
