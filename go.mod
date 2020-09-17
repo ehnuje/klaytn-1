@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/VictoriaMetrics/fastcache v1.5.7
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
+	github.com/allegro/bigcache v1.2.1-0.20190218064605-e24eb225f156
 	github.com/aristanetworks/goarista v0.0.0-20191001182449-186a6201b8ef
 	github.com/aws/aws-sdk-go v1.34.0
 	github.com/cespare/cp v1.0.0
