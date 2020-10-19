@@ -107,6 +107,7 @@ type Config struct {
 	SkipBcVersionCheck   bool `toml:"-"`
 	SingleDB             bool
 	NumStateTrieShards   uint
+	EnableDBPerfMetrics  bool
 	LevelDBCompression   database.LevelDBCompressionType
 	LevelDBBufferPool    bool
 	LevelDBCacheSize     int

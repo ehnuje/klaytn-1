@@ -95,6 +95,7 @@ var FlagGroups = []FlagGroup{
 			DynamoDBWriteCapacityFlag,
 			NoParallelDBWriteFlag,
 			SenderTxHashIndexingFlag,
+			DBNoPerformanceMetricsFlag,
 		},
 	},
 	{
