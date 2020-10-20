@@ -21,6 +21,7 @@
 package database
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -61,6 +62,7 @@ var defaultLevelDBOption = &opt.Options{
 	OpenFilesCacheCapacity: MinOpenFilesCacheCapacity,
 	Filter:                 filter.NewBloomFilter(minBitsPerKeyForFilter),
 	DisableBufferPool:      false,
+	DisableSeeksCompaction: true,
 }
 
 // GetDefaultLevelDBOption returns default LevelDB option copied from defaultLevelDBOption.
@@ -92,12 +94,16 @@ type levelDB struct {
 	fn string      // filename for reporting
 	db *leveldb.DB // LevelDB instance
 
-	compTimeMeter   metrics.Meter // Meter for measuring the total time spent in database compaction
-	compReadMeter   metrics.Meter // Meter for measuring the data read during compaction
-	compWriteMeter  metrics.Meter // Meter for measuring the data written during compaction
-	diskReadMeter   metrics.Meter // Meter for measuring the effective amount of data read
-	diskWriteMeter  metrics.Meter // Meter for measuring the effective amount of data written
-	blockCacheGauge metrics.Gauge // Gauge for measuring the current size of block cache
+	compTimeMeter      metrics.Meter // Meter for measuring the total time spent in database compaction
+	compReadMeter      metrics.Meter // Meter for measuring the data read during compaction
+	compWriteMeter     metrics.Meter // Meter for measuring the data written during compaction
+	diskReadMeter      metrics.Meter // Meter for measuring the effective amount of data read
+	diskWriteMeter     metrics.Meter // Meter for measuring the effective amount of data written
+	blockCacheGauge    metrics.Gauge // Gauge for measuring the current size of block cache
+	memCompGauge       metrics.Gauge // Gauge for tracking the number of memory compaction
+	level0CompGauge    metrics.Gauge // Gauge for tracking the number of table compaction in level0
+	nonlevel0CompGauge metrics.Gauge // Gauge for tracking the number of table compaction in non0 level
+	seekCompGauge      metrics.Gauge // Gauge for tracking the number of table compaction caused by read opt
 
 	quitLock sync.Mutex      // Mutex protecting the quit channel access
 	quitChan chan chan error // Quit channel to stop the metrics collection before closing the database
@@ -114,6 +120,7 @@ func getLevelDBOptions(dbc *DBConfig) *opt.Options {
 		DisableBufferPool:             !dbc.LevelDBBufferPool,
 		CompactionTableSize:           2 * opt.MiB,
 		CompactionTableSizeMultiplier: 1.0,
+		DisableSeeksCompaction:        true,
 	}
 
 	return newOption
@@ -318,6 +325,10 @@ func (db *levelDB) Meter(prefix string) {
 	db.diskReadMeter = metrics.NewRegisteredMeter(prefix+"disk/read", nil)
 	db.diskWriteMeter = metrics.NewRegisteredMeter(prefix+"disk/write", nil)
 	db.blockCacheGauge = metrics.NewRegisteredGauge(prefix+"blockcache", nil)
+	db.memCompGauge = metrics.NewRegisteredGauge(prefix+"compact/memory", nil)
+	db.level0CompGauge = metrics.NewRegisteredGauge(prefix+"compact/level0", nil)
+	db.nonlevel0CompGauge = metrics.NewRegisteredGauge(prefix+"compact/nonlevel0", nil)
+	db.seekCompGauge = metrics.NewRegisteredGauge(prefix+"compact/seek", nil)
 
 	// Short circuit metering if the metrics system is disabled
 	// Above meters are initialized by NilMeter if metricutils.Enabled == false
@@ -397,6 +408,30 @@ hasError:
 
 		// BlockCache size
 		db.blockCacheGauge.Update(int64(s.BlockCacheSize))
+
+		// Compaction related stats
+		compCount, err := db.db.GetProperty("leveldb.compcount")
+		if err != nil {
+			db.logger.Error("Failed to read database iostats", "err", err)
+			merr = err
+			continue
+		}
+
+		var (
+			memComp       uint32
+			level0Comp    uint32
+			nonLevel0Comp uint32
+			seekComp      uint32
+		)
+		if n, err := fmt.Sscanf(compCount, "MemComp:%d Level0Comp:%d NonLevel0Comp:%d SeekComp:%d", &memComp, &level0Comp, &nonLevel0Comp, &seekComp); n != 4 || err != nil {
+			db.logger.Error("Compaction count statistic not found")
+			merr = err
+			continue
+		}
+		db.memCompGauge.Update(int64(memComp))
+		db.level0CompGauge.Update(int64(level0Comp))
+		db.nonlevel0CompGauge.Update(int64(nonLevel0Comp))
+		db.seekCompGauge.Update(int64(seekComp))
 
 		// Sleep a bit, then repeat the stats collection
 		select {
