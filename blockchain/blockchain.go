@@ -1616,9 +1616,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		switch status {
 		case CanonStatTy:
+			elapsed := time.Since(bstart)
 			logger.Debug("Inserted new block", "number", block.Number(), "hash", block.Hash(),
-				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(time.Since(bstart)))
-			logger.Info(fmt.Sprintf("inserted a new block %v, %v, %v", block.NumberU64(), len(block.Transactions()), common.PrettyDuration(time.Since(bstart))))
+				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(elapsed))
+			if elapsed > 100*time.Millisecond {
+				logger.Info(fmt.Sprintf("inserted a new block %v, %v, %v", block.NumberU64(), len(block.Transactions()), common.PrettyDuration(time.Since(bstart))))
+			}
 
 			coalescedLogs = append(coalescedLogs, logs...)
 			events = append(events, ChainEvent{
