@@ -958,6 +958,18 @@ func (mr *MockBlockChainMockRecorder) SubscribeRemovedLogsEvent(arg0 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeRemovedLogsEvent", reflect.TypeOf((*MockBlockChain)(nil).SubscribeRemovedLogsEvent), arg0)
 }
 
+// ToggleBlockWriteSummary mocks base method
+func (m *MockBlockChain) ToggleBlockWriteSummary() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ToggleBlockWriteSummary")
+}
+
+// ToggleBlockWriteSummary indicates an expected call of ToggleBlockWriteSummary
+func (mr *MockBlockChainMockRecorder) ToggleBlockWriteSummary() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ToggleBlockWriteSummary", reflect.TypeOf((*MockBlockChain)(nil).ToggleBlockWriteSummary))
+}
+
 // TrieNode mocks base method
 func (m *MockBlockChain) TrieNode(arg0 common.Hash) ([]byte, error) {
 	m.ctrl.T.Helper()
