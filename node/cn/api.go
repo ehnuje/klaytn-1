@@ -514,3 +514,7 @@ func (api *PrivateDebugAPI) getModifiedStorageNodes(contractAddr common.Address,
 		"startBlock", startBlock.NumberU64(), "endBlock", endBlock.NumberU64(), "numModifiedNodes", numModifiedNodes, "elapsed", time.Since(start))
 	return numModifiedNodes, nil
 }
+
+func (api *PrivateDebugAPI) ToggleBlockWriteSummary() {
+	api.cn.blockchain.ToggleBlockWriteSummary()
+}

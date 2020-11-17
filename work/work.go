@@ -307,4 +307,7 @@ type BlockChain interface {
 	// KES
 	BlockSubscriptionLoop(pool *blockchain.TxPool)
 	CloseBlockSubscriptionLoop()
+
+	// Debug
+	ToggleBlockWriteSummary()
 }

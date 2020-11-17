@@ -169,6 +169,9 @@ type BlockChain struct {
 	// Warm up
 	lastCommittedBlock uint64
 	quitWarmUp         chan struct{}
+
+	// Debug
+	disableBlockSummary bool
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -1615,10 +1618,15 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		switch writeResult.Status {
 		case CanonStatTy:
+			localLogger := logger.Info
+			if bc.disableBlockSummary {
+				localLogger = logger.Debug
+			}
+
 			processTxsTime := procStats.AfterApplyTxs.Sub(procStats.BeforeApplyTxs)
 			processFinalizeTime := procStats.AfterFinalize.Sub(procStats.AfterApplyTxs)
 			validateTime := afterValidate.Sub(procStats.AfterFinalize)
-			logger.Info("Inserted a new block", "number", block.Number(), "hash", block.Hash(),
+			localLogger("Inserted a new block", "number", block.Number(), "hash", block.Hash(),
 				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(time.Since(bstart)),
 				"processTxs", processTxsTime, "processFinalize", processFinalizeTime, "validateState", validateTime,
 				"totalWriteTime", writeResult.TotalWriteTime, "trieWriteTime", writeResult.TrieWriteTime)
@@ -2139,6 +2147,11 @@ func (bc *BlockChain) IsSenderTxHashIndexingEnabled() bool {
 func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {
 	filePath := bc.db.GetDBConfig().Dir + "/fastcache"
 	return bc.stateCache.TrieDB().SaveTrieNodeCacheToFile(filePath)
+}
+
+// ToggleBlockWriteSummary toggles the block summary on and off.
+func (bc *BlockChain) ToggleBlockWriteSummary() {
+	bc.disableBlockSummary = !bc.disableBlockSummary
 }
 
 // ApplyTransaction attempts to apply a transaction to the given state database

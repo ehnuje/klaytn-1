@@ -598,7 +598,13 @@ web3._extend({
 			call: 'debug_setVMLogTarget',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'toggleBlockWriteSummary',
+			call: 'debug_toggleBlockWriteSummary',
+			params: 0
+		}),
 	],
+
 	properties: []
 });
 `
