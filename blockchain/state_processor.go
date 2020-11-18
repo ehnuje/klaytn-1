@@ -79,10 +79,14 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	author, _ := p.bc.Engine().Author(header) // Ignore error, we're past header validation
 
 	processStats.BeforeApplyTxs = time.Now()
+	logger.Info("Process Start", "blockNum", block.NumberU64())
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
+		txStart := time.Now()
 		receipt, _, internalTxTrace, err := p.bc.ApplyTransaction(p.config, &author, statedb, header, tx, usedGas, &cfg)
+		logger.Info("Processed a tx", "elapsed", time.Since(txStart),
+			"txHash", tx.Hash().String())
 		if err != nil {
 			return nil, nil, 0, nil, processStats, err
 		}
@@ -90,6 +94,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		allLogs = append(allLogs, receipt.Logs...)
 		internalTxTraces = append(internalTxTraces, internalTxTrace)
 	}
+	logger.Info("Process Finished", "blockNum", block.NumberU64())
 	processStats.AfterApplyTxs = time.Now()
 
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
