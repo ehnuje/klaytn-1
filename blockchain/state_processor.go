@@ -84,9 +84,10 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		txStart := time.Now()
+		from, _ := tx.From()
 		receipt, _, internalTxTrace, err := p.bc.ApplyTransaction(p.config, &author, statedb, header, tx, usedGas, &cfg)
 		logger.Info("Processed a tx", "elapsed", time.Since(txStart),
-			"txHash", tx.Hash().String())
+			"txHash", tx.Hash(), "from", from.String(), "to", tx.To().String())
 		if err != nil {
 			return nil, nil, 0, nil, processStats, err
 		}
