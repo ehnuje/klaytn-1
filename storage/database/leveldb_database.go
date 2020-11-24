@@ -280,6 +280,7 @@ func (db *levelDB) Get(key []byte) ([]byte, error) {
 		start := time.Now()
 		val, err := db.get(key)
 		db.getTimeMeter.Mark(int64(time.Since(start)))
+		logger.Info("leveldb get", "time", time.Since(start))
 		return val, err
 	}
 	return db.get(key)
