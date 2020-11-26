@@ -2186,7 +2186,10 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(context, statedb, chainConfig, vmConfig)
 	// Apply the transaction to the current state (included in the env)
+
+	txExecStart := time.Now()
 	_, gas, kerr := ApplyMessage(vmenv, msg)
+	logger.Info("ApplyMessage", "tx", tx.Hash().String(), time.Since(txExecStart))
 	err = kerr.ErrTxInvalid
 	if err != nil {
 		return nil, 0, nil, err
@@ -2200,8 +2203,11 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 			return nil, 0, nil, err
 		}
 	}
+
+	finaliseStart := time.Now()
 	// Update the state with pending changes
 	statedb.Finalise(true, false)
+	logger.Info("Finalise", "tx", tx.Hash().String(), time.Since(finaliseStart))
 	*usedGas += gas
 
 	receipt := types.NewReceipt(kerr.Status, tx.Hash(), gas)
