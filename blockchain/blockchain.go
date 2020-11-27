@@ -2189,7 +2189,7 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 
 	txExecStart := time.Now()
 	_, gas, kerr := ApplyMessage(vmenv, msg)
-	logger.Info("ApplyMessage", "tx", tx.Hash().String(), time.Since(txExecStart))
+	logger.Info("ApplyMessage", "tx", tx.Hash().String(), "elpased", time.Since(txExecStart))
 	err = kerr.ErrTxInvalid
 	if err != nil {
 		return nil, 0, nil, err
@@ -2207,7 +2207,7 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	finaliseStart := time.Now()
 	// Update the state with pending changes
 	statedb.Finalise(true, false)
-	logger.Info("Finalise", "tx", tx.Hash().String(), time.Since(finaliseStart))
+	logger.Info("Finalise", "tx", tx.Hash().String(), "elpased", time.Since(finaliseStart))
 	*usedGas += gas
 
 	receipt := types.NewReceipt(kerr.Status, tx.Hash(), gas)
