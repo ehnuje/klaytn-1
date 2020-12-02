@@ -126,7 +126,7 @@ func getLevelDBOptions(dbc *DBConfig) *opt.Options {
 	newOption := &opt.Options{
 		OpenFilesCacheCapacity:        dbc.OpenFilesLimit,
 		BlockCacheCapacity:            dbc.LevelDBCacheSize / 2 * opt.MiB,
-		WriteBuffer:                   dbc.LevelDBCacheSize / 2 * opt.MiB,
+		WriteBuffer:                   (dbc.LevelDBCacheSize/2 + 100) * opt.MiB,
 		Filter:                        filter.NewBloomFilter(10),
 		DisableBufferPool:             !dbc.LevelDBBufferPool,
 		CompactionTableSize:           2 * opt.MiB,
