@@ -51,7 +51,7 @@ const (
 const (
 	minWriteBufferSize        = 2 * opt.MiB
 	minBlockCacheCapacity     = 2 * minWriteBufferSize
-	MinOpenFilesCacheCapacity = 16
+	MinOpenFilesCacheCapacity = 50
 	minBitsPerKeyForFilter    = 10
 )
 
