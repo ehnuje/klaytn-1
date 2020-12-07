@@ -1619,7 +1619,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			processTxsTime := procStats.AfterApplyTxs.Sub(procStats.BeforeApplyTxs)
 			processFinalizeTime := procStats.AfterFinalize.Sub(procStats.AfterApplyTxs)
 			validateTime := afterValidate.Sub(procStats.AfterFinalize)
-			logger.Info("Inserted a new block", "number", block.Number(), "hash", block.Hash(),
+			logger.Debug("Inserted a new block", "number", block.Number(), "hash", block.Hash(),
 				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(time.Since(bstart)),
 				"processTxs", processTxsTime, "finalize", processFinalizeTime, "validateState", validateTime,
 				"totalWrite", writeResult.TotalWriteTime, "trieWrite", writeResult.TrieWriteTime)
