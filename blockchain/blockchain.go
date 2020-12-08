@@ -57,16 +57,25 @@ import (
 const insertTimeLimit = common.PrettyDuration(time.Second)
 
 var (
+	// details of block write time
 	blockInsertTimeMeter     = metrics.NewRegisteredMeter("chain/inserts", nil)
 	blockLongInsertTimeGauge = metrics.NewRegisteredGauge("chain/inserts/long", nil)
 	blockProcessTimeMeter    = metrics.NewRegisteredMeter("chain/process", nil)
 	blockFinalizeTimeMeter   = metrics.NewRegisteredMeter("chain/finalize", nil)
 	blockValidateTimeMeter   = metrics.NewRegisteredMeter("chain/validate", nil)
-	ErrNoGenesis             = errors.New("Genesis not found in chain")
-	ErrNotExistNode          = errors.New("the node does not exist in cached node")
-	ErrQuitBySignal          = errors.New("quit by signal")
-	ErrNotInWarmUp           = errors.New("not in warm up")
-	logger                   = log.NewModuleLogger(log.Blockchain)
+
+	// details of state trie write time
+	writeStateTrieTimeMeter     = metrics.NewRegisteredMeter("chain/statetrie", nil)
+	stateTrieCommitTimeMeter    = metrics.NewRegisteredMeter("chain/statetrie/commit", nil)
+	stateTrieWriteTimeMeter     = metrics.NewRegisteredGauge("chain/statetrie/write", nil)
+	stateTrieReferenceTimeMeter = metrics.NewRegisteredMeter("chain/statetrie/reference", nil)
+	stateTrieCapTimeMeter       = metrics.NewRegisteredMeter("chain/statetrie/cap", nil)
+
+	ErrNoGenesis    = errors.New("Genesis not found in chain")
+	ErrNotExistNode = errors.New("the node does not exist in cached node")
+	ErrQuitBySignal = errors.New("quit by signal")
+	ErrNotInWarmUp  = errors.New("not in warm up")
+	logger          = log.NewModuleLogger(log.Blockchain)
 )
 
 // Below is the list of the constants for cache size.
@@ -1054,17 +1063,25 @@ func (bc *BlockChain) writeReceipts(hash common.Hash, number uint64, receipts ty
 // If not, it flushes state trie to DB periodically. (period = bc.cacheConfig.BlockInterval)
 func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) error {
 	state.LockGCCachedNode()
-	defer state.UnlockGCCachedNode()
+	start := time.Now()
+
+	defer func() {
+		writeStateTrieTimeMeter.Mark(int64(time.Since(start)))
+		state.UnlockGCCachedNode()
+	}()
 
 	root, err := state.Commit(true)
+	stateTrieCommitTimeMeter.Mark(int64(time.Since(start)))
 	if err != nil {
 		return err
 	}
 	trieDB := bc.stateCache.TrieDB()
 	trieDB.UpdateMetricNodes()
 
+	afterCommit := time.Now()
 	// If we're running an archive node, always flush
 	if bc.isArchiveMode() {
+		defer writeStateTrieTimeMeter.Mark(int64(time.Since(afterCommit)))
 		if err := trieDB.Commit(root, false, block.NumberU64()); err != nil {
 			return err
 		}
@@ -1074,6 +1091,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 	} else {
 		// Full but not archive node, do proper garbage collection
 		trieDB.Reference(root, common.Hash{}) // metadata reference to keep trie alive
+		stateTrieReferenceTimeMeter.Mark(int64(time.Since(afterCommit)))
 
 		// If we exceeded our memory allowance, flush matured singleton nodes to disk
 		var (
@@ -1083,16 +1101,21 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 		if nodesSize > nodesSizeLimit || preimagesSize > 4*1024*1024 {
 			// NOTE-Klaytn Not to change the original behavior, error is not returned.
 			// Error should be returned if it is thought to be safe in the future.
+			capStart := time.Now()
 			if err := trieDB.Cap(nodesSizeLimit - database.IdealBatchSize); err != nil {
 				logger.Error("Error from trieDB.Cap", "err", err, "limit", nodesSizeLimit-database.IdealBatchSize)
 			}
+			stateTrieCapTimeMeter.Mark(int64(time.Since(capStart)))
 		}
 
 		if isCommitTrieRequired(bc, block.NumberU64()) {
-			logger.Trace("Commit the state trie into the disk", "blocknum", block.NumberU64())
+			writeStart := time.Now()
+			logger.Trace("Commit the state trie into the disk", "blockNum", block.NumberU64())
 			if err := trieDB.Commit(block.Header().Root, true, block.NumberU64()); err != nil {
+				writeStateTrieTimeMeter.Mark(int64(time.Since(writeStart)))
 				return err
 			}
+			writeStateTrieTimeMeter.Mark(int64(time.Since(writeStart)))
 
 			if bc.checkStartStateMigration(block.NumberU64(), root) {
 				// flush referenced trie nodes out to new stateTrieDB
