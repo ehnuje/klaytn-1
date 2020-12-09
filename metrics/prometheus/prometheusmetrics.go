@@ -7,10 +7,11 @@ package prometheusmetrics
 
 import (
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/rcrowley/go-metrics"
 	"strings"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rcrowley/go-metrics"
 )
 
 // PrometheusConfig provides a container with config parameters for the Prometheus Exporter
@@ -79,11 +80,10 @@ func (c *PrometheusConfig) UpdatePrometheusMetricsOnce() error {
 		case metrics.GaugeFloat64:
 			c.gaugeFromNameAndValue(name, float64(metric.Value()))
 		case metrics.Histogram:
-			samples := metric.Snapshot().Sample().Values()
-			if len(samples) > 0 {
-				lastSample := samples[len(samples)-1]
-				c.gaugeFromNameAndValue(name, float64(lastSample))
-			}
+			c.gaugeFromNameAndValue(name+"_mean", metric.Mean())
+			c.gaugeFromNameAndValue(name+"_max", float64(metric.Max()))
+			c.gaugeFromNameAndValue(name+"_min", float64(metric.Min()))
+			metric.Clear()
 		case metrics.Meter:
 			lastSample := metric.Snapshot().Rate1()
 			c.gaugeFromNameAndValue(name, float64(lastSample))
