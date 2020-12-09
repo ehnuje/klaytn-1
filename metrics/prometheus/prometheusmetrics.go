@@ -88,8 +88,9 @@ func (c *PrometheusConfig) UpdatePrometheusMetricsOnce() error {
 			lastSample := metric.Snapshot().Rate1()
 			c.gaugeFromNameAndValue(name, float64(lastSample))
 		case metrics.Timer:
-			lastSample := metric.Snapshot().Rate1()
-			c.gaugeFromNameAndValue(name, float64(lastSample))
+			c.gaugeFromNameAndValue(name+"_mean", metric.Mean())
+			c.gaugeFromNameAndValue(name+"_max", float64(metric.Max()))
+			c.gaugeFromNameAndValue(name+"_min", float64(metric.Min()))
 		}
 	})
 	return nil

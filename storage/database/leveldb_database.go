@@ -112,7 +112,7 @@ type levelDB struct {
 	seekCompGauge          metrics.Gauge // Gauge for tracking the number of table compaction caused by read opt
 
 	perfCheck           bool
-	getTimeMeter        metrics.Histogram
+	getTimeMeter        metrics.Timer
 	putTimeMeter        metrics.Meter
 	batchWriteTimeMeter metrics.Meter
 
@@ -279,7 +279,7 @@ func (db *levelDB) Get(key []byte) ([]byte, error) {
 	if db.perfCheck {
 		start := time.Now()
 		val, err := db.get(key)
-		db.getTimeMeter.Update(int64(time.Since(start)))
+		db.getTimeMeter.Update(time.Since(start))
 		return val, err
 	}
 	return db.get(key)
@@ -362,7 +362,7 @@ func (db *levelDB) Meter(prefix string) {
 
 	db.openedTablesCountMeter = metrics.NewRegisteredMeter(prefix+"opendedtables", nil)
 
-	db.getTimeMeter = metrics.NewRegisteredHistogram(prefix+"get/time", nil, metrics.NewUniformSample(10000))
+	db.getTimeMeter = metrics.NewRegisteredTimer(prefix+"get/time", nil)
 	db.putTimeMeter = metrics.NewRegisteredMeter(prefix+"put/time", nil)
 	db.batchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
 

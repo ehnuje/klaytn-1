@@ -58,11 +58,11 @@ const insertTimeLimit = common.PrettyDuration(time.Second)
 
 var (
 	// details of block write time
-	blockInsertTimeMeter     = metrics.NewRegisteredHistogram("chain/inserts", nil, metrics.NewUniformSample(10000))
-	blockLongInsertTimeGauge = metrics.NewRegisteredHistogram("chain/inserts/long", nil, metrics.NewUniformSample(10000))
-	blockProcessTimeMeter    = metrics.NewRegisteredHistogram("chain/process", nil, metrics.NewUniformSample(10000))
-	blockFinalizeTimeMeter   = metrics.NewRegisteredHistogram("chain/finalize", nil, metrics.NewUniformSample(10000))
-	blockValidateTimeMeter   = metrics.NewRegisteredHistogram("chain/validate", nil, metrics.NewUniformSample(10000))
+	blockInsertTimeMeter     = metrics.NewRegisteredTimer("chain/inserts", nil)
+	blockLongInsertTimeGauge = metrics.NewRegisteredTimer("chain/inserts/long", nil)
+	blockProcessTimeMeter    = metrics.NewRegisteredTimer("chain/process", nil)
+	blockFinalizeTimeMeter   = metrics.NewRegisteredTimer("chain/finalize", nil)
+	blockValidateTimeMeter   = metrics.NewRegisteredTimer("chain/validate", nil)
 
 	// details of state trie write time
 	writeStateTrieTimeMeter     = metrics.NewRegisteredMeter("chain/statetrie", nil)
@@ -1656,12 +1656,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				"processTxs", processTxsTime, "finalize", processFinalizeTime, "validateState", validateTime,
 				"totalWrite", writeResult.TotalWriteTime, "trieWrite", writeResult.TrieWriteTime)
 
-			blockProcessTimeMeter.Update(int64(processTxsTime))
-			blockFinalizeTimeMeter.Update(int64(processFinalizeTime))
-			blockValidateTimeMeter.Update(int64(validateTime))
-			blockInsertTimeMeter.Update(int64(totalTime))
+			blockProcessTimeMeter.Update(time.Duration(processTxsTime))
+			blockFinalizeTimeMeter.Update(time.Duration(processFinalizeTime))
+			blockValidateTimeMeter.Update(time.Duration(validateTime))
+			blockInsertTimeMeter.Update(time.Duration(totalTime))
 			if totalTime >= insertTimeLimit {
-				blockLongInsertTimeGauge.Update(int64(totalTime))
+				blockLongInsertTimeGauge.Update(time.Duration(totalTime))
 			}
 
 			coalescedLogs = append(coalescedLogs, logs...)
