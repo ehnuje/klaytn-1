@@ -91,6 +91,8 @@ func (c *PrometheusConfig) UpdatePrometheusMetricsOnce() error {
 			c.gaugeFromNameAndValue(name+"_mean", metric.Mean())
 			c.gaugeFromNameAndValue(name+"_max", float64(metric.Max()))
 			c.gaugeFromNameAndValue(name+"_min", float64(metric.Min()))
+			c.gaugeFromNameAndValue(name+"_rate", float64(metric.Rate1()))
+			c.gaugeFromNameAndValue(name+"_ratemean", float64(metric.RateMean()))
 		}
 	})
 	return nil
