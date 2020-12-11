@@ -41,7 +41,6 @@ func NewPrometheusProvider(r metrics.Registry, namespace string, subsystem strin
 
 func (c *PrometheusConfig) flattenKey(key string) string {
 	key = strings.Replace(key, " ", "_", -1)
-	key = strings.Replace(key, ".", "_", -1)
 	key = strings.Replace(key, "-", "_", -1)
 	key = strings.Replace(key, "=", "_", -1)
 	key = strings.Replace(key, "/", "_", -1)
@@ -71,7 +70,7 @@ func (c *PrometheusConfig) UpdatePrometheusMetrics() {
 }
 
 var pv = []float64{0.5, 0.75, 0.95, 0.99, 0.999, 0.9999}
-var pv_str = []string{"0.5", "0.75", "0.95", "0.99", "0.999", "0.9999"}
+var pv_str = []string{"_0.5", "_0.75", "_0.95", "_0.99", "_0.999", "_0.9999"}
 
 func (c *PrometheusConfig) UpdatePrometheusMetricsOnce() error {
 	c.Registry.Each(func(name string, i interface{}) {
