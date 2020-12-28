@@ -46,7 +46,7 @@ type sdbBatchResult struct {
 // newShardedDB creates database with numShards shards, or partitions.
 // The type of database is specified DBConfig.DBType.
 func newShardedDB(dbc *DBConfig, et DBEntryType, numShards uint) (*shardedDB, error) {
-	const numShardsLimit = 16
+	const numShardsLimit = 32
 
 	if numShards == 0 {
 		logger.Crit("numShards should be greater than 0!")
