@@ -324,7 +324,7 @@ var (
 	TrieNodeCacheSavePeriodFlag = cli.DurationFlag{
 		Name:  "state.trie-cache-save-period",
 		Usage: "Period of saving in memory trie cache to file if fastcache is used",
-		Value: 24 * time.Hour,
+		Value: 2 * time.Hour,
 	}
 	SenderTxHashIndexingFlag = cli.BoolFlag{
 		Name:  "sendertxhashindexing",

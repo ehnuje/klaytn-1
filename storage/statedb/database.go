@@ -24,7 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"runtime"
 	"sync"
 	"time"
 
@@ -345,9 +344,9 @@ func getTrieNodeCacheSizeMB() int {
 		return 1 * 1024 // allocate 1G for small memory
 	}
 
-	memoryScalePercent := 0.3 // allocate 30% for 20 < mem < 100
+	memoryScalePercent := 0.6 // allocate 30% for 20 < mem < 100
 	if totalPhysicalMemMB > 100*1024 {
-		memoryScalePercent = 0.35 // allocate 35% for 100 < mem
+		memoryScalePercent = 0.7 // allocate 35% for 100 < mem
 	}
 
 	return int(totalPhysicalMemMB * memoryScalePercent)
@@ -1141,7 +1140,7 @@ func (db *Database) SaveTrieNodeCacheToFile(filePath string) error {
 	start := time.Now()
 	go func() {
 		logger.Info("start saving cache to file", "filePath", filePath)
-		if err := db.trieNodeCache.SaveToFile(filePath, runtime.NumCPU()/2); err != nil {
+		if err := db.trieNodeCache.SaveToFile(filePath, 1); err != nil {
 			logger.Error("failed to save cache to file",
 				"filePath", filePath, "elapsed", time.Since(start), "err", err)
 		} else {
