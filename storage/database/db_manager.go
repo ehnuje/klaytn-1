@@ -224,6 +224,20 @@ type DBManager interface {
 	// ChainDataFetcher checkpoint function
 	WriteChainDataFetcherCheckpoint(checkpoint uint64) error
 	ReadChainDataFetcherCheckpoint() (uint64, error)
+
+	// geth snapshot related functions
+	WriteSnapshotRoot(root common.Hash)
+	DeleteSnapshotRoot()
+
+	ReadAccountSnapshot(hash common.Hash) []byte
+	WriteAccountSnapshot(hash common.Hash, entry []byte)
+	DeleteAccountSnapshot(hash common.Hash)
+
+	WriteStorageSnapshot(accountHash, storageHash common.Hash, entry []byte)
+	ReadStorageSnapshot(accountHash, storageHash common.Hash) []byte
+	DeleteStorageSnapshot(accountHash, storageHash common.Hash)
+
+	ReadSnapshotGenerator() []byte
 }
 
 type DBEntryType uint8
