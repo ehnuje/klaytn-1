@@ -35,7 +35,7 @@ func calcNumStateObjectEncoderWorkers() int {
 }
 
 const stateObjEncoderMaxWorkers = 16
-const stateObjEncoderDefaultCap = 20000
+const stateObjEncoderDefaultCap = 40000
 
 var stateObjEncoder = newStateObjectEncoder(stateObjEncoderDefaultWorkers, stateObjEncoderDefaultCap)
 
