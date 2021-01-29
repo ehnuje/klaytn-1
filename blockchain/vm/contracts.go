@@ -535,3 +535,26 @@ func validateSender(input []byte, picker types.AccountKeyPicker) error {
 
 	return nil
 }
+
+type cbdc struct{}
+
+func (c *cbdc) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.FeePayerGas, params.FeePayerComputationCost
+}
+
+func (c *cbdc) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+
+	evm.StateDB.SetState(contract.Address(), "", "")
+	evm.StateDB.GetState("")
+	// Run function should not be called. Instead of this function, RunFeePayerContract should be called.
+	logger.Error("should not be reached here")
+	return nil, nil
+}
+
+func RunayerCBDCContract(p PrecompiledContract, input []byte, contract *Contract) ([]byte, uint64, error) {
+	gas, computationCost := p.GetRequiredGasAndComputationCost(input)
+	if contract.UseGas(gas) {
+		return contract.FeePayerAddress.Bytes(), computationCost, nil
+	}
+	return nil, computationCost, kerrors.ErrOutOfGas
+}
