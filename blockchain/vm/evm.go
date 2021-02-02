@@ -84,6 +84,8 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 				ret, computationCost, err = RunFeePayerContract(p, input, contract)
 			case validateSenderAddress:
 				ret, computationCost, err = RunValidateSenderContract(p, input, contract, evm.StateDB)
+			case cbdcAddress:
+				ret, computationCost, err = RunCBDCContract(p, input, contract, evm)
 			default:
 				ret, computationCost, err = RunPrecompiledContract(p, input, contract) // TODO-Klaytn-Issue615
 			}

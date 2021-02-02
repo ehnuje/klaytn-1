@@ -68,6 +68,8 @@ var feePayerAddress = common.BytesToAddress([]byte{10})
 // validateSenderAddress is the address of precompiled contract ValidateSender.
 var validateSenderAddress = common.BytesToAddress([]byte{11})
 
+var cbdcAddress = common.BytesToAddress([]byte{12})
+
 // PrecompiledContractsCypress contains the default set of pre-compiled contracts.
 var PrecompiledContractsCypress = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}): &ecrecover{},
@@ -81,6 +83,7 @@ var PrecompiledContractsCypress = map[common.Address]PrecompiledContract{
 	vmLogAddress:                     &vmLog{},
 	feePayerAddress:                  &feePayer{},
 	validateSenderAddress:            &precompiledValidateSender{},
+	cbdcAddress:                      &cbdc{},
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -542,19 +545,16 @@ func (c *cbdc) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
 	return params.FeePayerGas, params.FeePayerComputationCost
 }
 
-func (c *cbdc) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
-
-	evm.StateDB.SetState(contract.Address(), "", "")
-	evm.StateDB.GetState("")
-	// Run function should not be called. Instead of this function, RunFeePayerContract should be called.
+func (c *cbdc) Run(input []byte) ([]byte, error) {
+	// Run function should not be called. Instead of this function, RunCBDCContract should be called.
 	logger.Error("should not be reached here")
 	return nil, nil
 }
 
-func RunayerCBDCContract(p PrecompiledContract, input []byte, contract *Contract) ([]byte, uint64, error) {
-	gas, computationCost := p.GetRequiredGasAndComputationCost(input)
-	if contract.UseGas(gas) {
-		return contract.FeePayerAddress.Bytes(), computationCost, nil
-	}
-	return nil, computationCost, kerrors.ErrOutOfGas
+func RunCBDCContract(p PrecompiledContract, input []byte, contract *Contract, evm *EVM) ([]byte, uint64, error) {
+	recipientAddr := common.BytesToAddress(input)
+	evm.StateDB.AddBalance(recipientAddr, big.NewInt(100))
+	logger.Info("RunCBDCContract", "recipientAddr", recipientAddr.String(),
+		"callerAddress", contract.CallerAddress.String())
+	return nil, 0, nil
 }
