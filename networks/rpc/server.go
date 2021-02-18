@@ -250,6 +250,9 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 
 		// If a single shot request is executing, run and return immediately
 		if singleShot {
+			req := reqs[0]
+			logger.Error("", "batch", batch, "len(reqs)", len(reqs), "name", req.svcname, "values", req.args)
+
 			if batch {
 				s.execBatch(ctx, codec, reqs, &subscriptionCount)
 			} else {

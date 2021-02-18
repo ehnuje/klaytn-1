@@ -35,6 +35,7 @@ var Modules = map[string]string{
 	"governance":       Governance_JS,
 	"bootnode":         Bootnode_JS,
 	"chaindatafetcher": ChainDataFetcher_JS,
+	"eth":              EthJs,
 }
 
 const ChainDataFetcher_JS = `
@@ -1304,5 +1305,18 @@ web3._extend({
 			getter: 'clique_proposals'
 		}),
 	]
+});
+`
+
+const EthJs = `
+web3._extend({
+	property: 'eth',
+	methods: [
+		new web3._extend.Method({
+			name: 'chainId',
+			call: 'eth_chainId',
+			params: 0
+		}),
+	],
 });
 `
