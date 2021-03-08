@@ -1722,6 +1722,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		receipts, logs, usedGas, internalTxTraces, procStats, err := bc.processor.Process(block, stateDB, bc.vmConfig)
 		if block.NumberU64()%10 == 0 {
 			time.Sleep(5 * time.Second)
+		} else {
+			time.Sleep(100 * time.Millisecond)
 		}
 
 		if err != nil {
