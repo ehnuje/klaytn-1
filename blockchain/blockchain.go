@@ -1723,7 +1723,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if block.NumberU64()%10 == 0 {
 			time.Sleep(5 * time.Second)
 		} else {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(200 * time.Millisecond)
 		}
 
 		if err != nil {
