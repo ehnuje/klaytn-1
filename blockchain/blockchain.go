@@ -57,6 +57,14 @@ import (
 // that time will be logged by blockLongInsertTimeGauge.
 const insertTimeLimit = common.PrettyDuration(time.Second)
 
+func init() {
+	blockProcessTimerV2 = metrics.NewCustomTimer(metrics.NewHistogram(metrics.NewExpDecaySample(512, 0.015)), metrics.NewMeter())
+	metrics.DefaultRegistry.Register("chain/process/v2", blockProcessTimerV2)
+
+	blockProcessTimerV3 = metrics.NewCustomTimer(metrics.NewHistogram(metrics.NewExpDecaySample(512, 0.015)), metrics.NewMeter())
+	metrics.DefaultRegistry.Register("chain/process/v3", blockProcessTimerV3)
+}
+
 var (
 	accountReadTimer   = metrics.NewRegisteredTimer("state/account/reads", nil)
 	accountHashTimer   = metrics.NewRegisteredTimer("state/account/hashes", nil)
@@ -70,6 +78,10 @@ var (
 
 	blockInsertTimer    = metrics.NewRegisteredTimer("chain/inserts", nil)
 	blockProcessTimer   = metrics.NewRegisteredTimer("chain/process", nil)
+	blockProcessTimerV2 metrics.Timer
+	blockProcessTimerV3 metrics.Timer
+	blockProcessMeter   = metrics.NewRegisteredMeter("chain/process/meter", nil)
+	blockProcessGauge   = metrics.NewRegisteredGauge("chain/process/gauge", nil)
 	blockExecutionTimer = metrics.NewRegisteredTimer("chain/execution", nil)
 	blockFinalizeTimer  = metrics.NewRegisteredTimer("chain/finalize", nil)
 	blockValidateTimer  = metrics.NewRegisteredTimer("chain/validate", nil)
@@ -1708,6 +1720,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		// Process block using the parent state as reference point.
 		receipts, logs, usedGas, internalTxTraces, procStats, err := bc.processor.Process(block, stateDB, bc.vmConfig)
+		if block.NumberU64()%10 == 0 {
+			time.Sleep(5 * time.Second)
+		}
+
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			atomic.StoreUint32(&followupInterrupt, 1)
@@ -1763,6 +1779,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				"totalWrite", writeResult.TotalWriteTime, "trieWrite", writeResult.TrieWriteTime)
 
 			blockProcessTimer.Update(time.Duration(processTxsTime))
+			blockProcessTimerV2.Update(time.Duration(processTxsTime))
+			blockProcessMeter.Mark(int64(processTxsTime))
+			blockProcessGauge.Update(int64(processTxsTime))
 			blockExecutionTimer.Update(time.Duration(processTxsTime) - trieAccess)
 			blockFinalizeTimer.Update(time.Duration(processFinalizeTime))
 			blockValidateTimer.Update(time.Duration(validateTime))
