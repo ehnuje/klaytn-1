@@ -68,8 +68,12 @@ var (
 	storageUpdateTimer = metrics.NewRegisteredTimer("state/storage/updates", nil)
 	storageCommitTimer = metrics.NewRegisteredTimer("state/storage/commits", nil)
 
-	blockInsertTimer    = metrics.NewRegisteredTimer("chain/inserts", nil)
-	blockProcessTimer   = metrics.NewRegisteredTimer("chain/process", nil)
+	blockInsertTimer  = metrics.NewRegisteredTimer("chain/inserts", nil)
+	blockProcessTimer = metrics.NewRegisteredTimer("chain/process", nil)
+
+	blockProcessTimeMeter = metrics.NewRegisteredGauge("chain/process/meter", nil)
+	blockProcessTimeGauge = metrics.NewRegisteredGauge("chain/process/gauge", nil)
+
 	blockExecutionTimer = metrics.NewRegisteredTimer("chain/execution", nil)
 	blockFinalizeTimer  = metrics.NewRegisteredTimer("chain/finalize", nil)
 	blockValidateTimer  = metrics.NewRegisteredTimer("chain/validate", nil)
@@ -1767,6 +1771,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				"totalWrite", writeResult.TotalWriteTime, "trieWrite", writeResult.TrieWriteTime)
 
 			blockProcessTimer.Update(time.Duration(processTxsTime))
+			blockProcessTimeMeter.Update(int64(processTxsTime))
+
+			if blockProcessTimeGauge.Value() < int64(processTxsTime) {
+				blockProcessTimeGauge.Update(int64(processTxsTime))
+			}
+
 			blockExecutionTimer.Update(time.Duration(processTxsTime) - trieAccess)
 			blockFinalizeTimer.Update(time.Duration(processFinalizeTime))
 			blockValidateTimer.Update(time.Duration(validateTime))

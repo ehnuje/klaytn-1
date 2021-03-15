@@ -80,6 +80,7 @@ func (c *PrometheusConfig) UpdatePrometheusMetricsOnce() error {
 			c.gaugeFromNameAndValue(name, float64(metric.Count()))
 		case metrics.Gauge:
 			c.gaugeFromNameAndValue(name, float64(metric.Value()))
+			metric.Update(0)
 		case metrics.GaugeFloat64:
 			c.gaugeFromNameAndValue(name, float64(metric.Value()))
 		case metrics.Histogram:
