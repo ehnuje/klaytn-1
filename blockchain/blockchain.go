@@ -1688,13 +1688,14 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		if bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker > 0 {
 			// if fetcher works and only a block is given, use prefetchTxWorker
-			for ti := range block.Transactions() {
-				select {
-				case bc.prefetchTxCh <- prefetchTx{ti, block, &followupInterrupt}:
-				default:
+			if len(chain) == 1 {
+				for ti := range block.Transactions() {
+					select {
+					case bc.prefetchTxCh <- prefetchTx{ti, block, &followupInterrupt}:
+					default:
+					}
 				}
-			}
-			if i < len(chain)-1 {
+			} else if i < len(chain)-1 {
 				// current block is not the last one, so prefetch the right next block
 				followup := chain[i+1]
 				go func(start time.Time) {
