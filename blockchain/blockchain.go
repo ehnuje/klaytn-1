@@ -324,8 +324,7 @@ func (bc *BlockChain) prefetchTxWorker(index int) {
 			logger.Debug("failed to retrieve stateDB for prefetchTxWorker", "err", err)
 			continue
 		}
-		vmCfg := bc.vmConfig
-		vmCfg.Prefetching = true
+		vmCfg := vm.Config{Prefetching: true}
 		bc.prefetcher.PrefetchTx(followup.block, followup.ti, stateDB, vmCfg, followup.followupInterrupt)
 	}
 	logger.Debug("prefetchTxWorker is terminated", "index", index)
@@ -1700,8 +1699,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				followup := chain[i+1]
 				go func(start time.Time) {
 					throwaway, _ := state.NewForPrefetching(parent.Root(), bc.stateCache)
-					vmCfg := bc.vmConfig
-					vmCfg.Prefetching = true
+					vmCfg := vm.Config{Prefetching: true}
 					bc.prefetcher.Prefetch(followup, throwaway, vmCfg, &followupInterrupt)
 
 					blockPrefetchExecuteTimer.Update(time.Since(start))
