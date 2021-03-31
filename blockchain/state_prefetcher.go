@@ -87,7 +87,8 @@ func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.
 
 	// Block precaching permitted to continue, execute the transaction
 	stateDB.Prepare(tx.Hash(), block.Hash(), ti)
-	if err := precacheTransaction(p.config, p.bc, nil, stateDB, header, tx, cfg); err != nil {
+	copiedTx := &*tx
+	if err := precacheTransaction(p.config, p.bc, nil, stateDB, header, copiedTx, cfg); err != nil {
 		return // Ugh, something went horribly wrong, bail out
 	}
 }
