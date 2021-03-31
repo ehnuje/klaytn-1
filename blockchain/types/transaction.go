@@ -27,6 +27,7 @@ import (
 	"errors"
 	"io"
 	"math/big"
+	"sync"
 	"sync/atomic"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
@@ -61,6 +62,8 @@ type Transaction struct {
 	from         atomic.Value
 	feePayer     atomic.Value
 	senderTxHash atomic.Value
+
+	mu sync.Mutex
 
 	// validatedSender represents the sender of the transaction to be used for ApplyTransaction().
 	// This value is set in AsMessageWithAccountKeyPicker().
@@ -404,6 +407,9 @@ func (tx *Transaction) Execute(vm VM, stateDB StateDB, currentBlockNumber uint64
 // XXX Rename message to something less arbitrary?
 // TODO-Klaytn: Message is removed and this function will return *Transaction.
 func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKeyPicker, currentBlockNumber uint64) (*Transaction, error) {
+	tx.mu.Lock()
+	defer tx.mu.Unlock()
+
 	intrinsicGas, err := tx.IntrinsicGas(currentBlockNumber)
 	if err != nil {
 		return nil, err
