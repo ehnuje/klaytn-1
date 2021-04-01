@@ -1729,6 +1729,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		}
 		afterValidate := time.Now()
 
+		atomic.StoreUint32(&followupInterrupt, 1)
 		// Write the block to the chain and get the writeResult.
 		writeResult, err := bc.WriteBlockWithState(block, receipts, stateDB)
 		if err != nil {
@@ -1739,7 +1740,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			}
 			return i, events, coalescedLogs, err
 		}
-		atomic.StoreUint32(&followupInterrupt, 1)
 
 		// Update the metrics subsystem with all the measurements
 		accountReadTimer.Update(stateDB.AccountReads)
