@@ -77,7 +77,7 @@ func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, c
 func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.StateDB, cfg vm.Config, interrupt *uint32) {
 	var (
 		header = block.Header()
-		tx     = block.Transactions()[ti]
+		tx     = *block.Transactions()[ti] // copy tx to avoid concurrent access to a tx
 	)
 
 	// If block precaching was interrupted, abort
@@ -87,7 +87,7 @@ func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.
 
 	// Block precaching permitted to continue, execute the transaction
 	stateDB.Prepare(tx.Hash(), block.Hash(), ti)
-	if err := precacheTransaction(p.config, p.bc, nil, stateDB, header, tx, cfg); err != nil {
+	if err := precacheTransaction(p.config, p.bc, nil, stateDB, header, &tx, cfg); err != nil {
 		return // Ugh, something went horribly wrong, bail out
 	}
 }
