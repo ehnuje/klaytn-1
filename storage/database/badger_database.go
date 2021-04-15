@@ -228,6 +228,7 @@ func (b *badgerBatch) Write() error {
 		return err
 	}
 	b.size = 0
+	b.batch = b.db.NewWriteBatch()
 	return nil
 }
 
