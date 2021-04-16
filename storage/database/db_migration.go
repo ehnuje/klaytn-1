@@ -52,6 +52,7 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 	// create src iterator and dst batch
 	srcIter := srcDB.NewIterator(nil, nil)
 	dstBatch := dstDB.NewBatch()
+	defer dstBatch.Close()
 
 	// vars for log
 	start := time.Now()

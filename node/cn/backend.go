@@ -155,12 +155,14 @@ func senderTxHashIndexer(db database.DBManager, chainEvent <-chan blockchain.Cha
 				// senderTxHash and txHash are the same if tx is not a fee-delegated tx.
 				// Do not store mapping between senderTxHash and txHash in this case.
 				if !ok {
+					batch.Close()
 					continue
 				}
 
 				txHash := tx.Hash()
 
 				if err = db.PutSenderTxHashToTxHashToBatch(batch, senderTxHash, txHash); err != nil {
+					batch.Close()
 					logger.Error("Failed to store senderTxHash to txHash mapping to database",
 						"blockNum", event.Block.Number(), "senderTxHash", senderTxHash, "txHash", txHash, "err", err)
 					break
@@ -170,6 +172,7 @@ func senderTxHashIndexer(db database.DBManager, chainEvent <-chan blockchain.Cha
 			if err == nil {
 				batch.Write()
 			}
+			batch.Close()
 
 		case <-subscription.Err():
 			return
