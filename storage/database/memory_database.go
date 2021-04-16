@@ -265,6 +265,8 @@ func (b *memBatch) Replay(w KeyValueWriter) error {
 	return nil
 }
 
+func (b *memBatch) Close() {}
+
 // iterator can walk over the (potentially partial) keyspace of a memory key
 // value store. Internally it is a deep copy of the entire iterated state,
 // sorted by keys.

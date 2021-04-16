@@ -85,3 +85,6 @@ func (batch *emptyBatch) Reset() {
 func (batch *emptyBatch) Replay(w KeyValueWriter) error {
 	return nil
 }
+
+func (batch *emptyBatch) Close() {
+}

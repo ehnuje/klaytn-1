@@ -588,6 +588,8 @@ func (stdBatch *stateTrieDBBatch) Replay(w KeyValueWriter) error {
 	return errResult
 }
 
+func (stdBatch *stateTrieDBBatch) Close() {}
+
 func (dbm *databaseManager) getDBDir(dbEntry DBEntryType) string {
 	miscDB := dbm.getDatabase(MiscDB)
 

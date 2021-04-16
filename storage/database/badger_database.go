@@ -249,3 +249,7 @@ func (b *badgerBatch) Replay(w KeyValueWriter) error {
 	logger.CritWithStack("Replay is not implemented in badgerBatch!")
 	return nil
 }
+
+func (b *badgerBatch) Close() {
+	b.batch.Cancel()
+}

@@ -493,3 +493,5 @@ func (sdbBatch *shardedDBBatch) Replay(w KeyValueWriter) error {
 	}
 	return nil
 }
+
+func (sdbBatch *shardedDBBatch) Close() {}

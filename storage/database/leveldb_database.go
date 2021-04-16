@@ -557,6 +557,8 @@ func (b *ldbBatch) Reset() {
 	b.size = 0
 }
 
+func (b *ldbBatch) Close() {}
+
 // bytesPrefixRange returns key range that satisfy
 // - the given prefix, and
 // - the given seek position

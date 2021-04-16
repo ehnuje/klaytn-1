@@ -40,6 +40,8 @@ type Batch interface {
 
 	// Replay replays the Batch contents.
 	Replay(w KeyValueWriter) error
+
+	Close()
 }
 
 // Batcher wraps the NewBatch method of a backing data store.
