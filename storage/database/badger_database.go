@@ -93,7 +93,7 @@ func (bg *badgerDB) runValueLogGC() {
 				continue
 			}
 			for {
-				err := bg.db.RunValueLogGC(0.7)
+				err := bg.db.RunValueLogGC(0.5)
 				// One gc call would only result in removal of at max one log file.
 				// As an optimization, immediately re-run it whenever it returns nil error
 				// (indicating a successful value log GC)
