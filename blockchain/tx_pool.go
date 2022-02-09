@@ -617,7 +617,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction) error {
-	gasFeePayer := uint64(0)
+	feePayerSigValidationGas := uint64(0)
 
 	// Check chain Id first.
 	if tx.ChainId().Cmp(pool.chainconfig.ChainID) != 0 {
@@ -642,7 +642,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	// Make sure the transaction is signed properly
-	gasFrom, err := tx.ValidateSender(pool.signer, pool.currentState, pool.currentBlockNumber)
+	senderSigValidationGas, err := tx.ValidateSender(pool.signer, pool.currentState, pool.currentBlockNumber)
 	if err != nil {
 		return err
 	}
@@ -658,7 +658,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	senderBalance := pool.getBalance(from)
 	if tx.IsFeeDelegatedTransaction() {
 		// balance check for fee-delegated tx
-		gasFeePayer, err = tx.ValidateFeePayer(pool.signer, pool.currentState, pool.currentBlockNumber)
+		feePayerSigValidationGas, err = tx.ValidateFeePayer(pool.signer, pool.currentState, pool.currentBlockNumber)
 		if err != nil {
 			return ErrInvalidFeePayer
 		}
@@ -702,7 +702,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	intrGas, err := tx.IntrinsicGas(pool.currentBlockNumber)
-	intrGas += gasFrom + gasFeePayer
+	intrGas += senderSigValidationGas + feePayerSigValidationGas
 	if err != nil {
 		return err
 	}

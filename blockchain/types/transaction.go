@@ -429,7 +429,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		return nil, err
 	}
 
-	gasFrom, err := tx.ValidateSender(s, picker, currentBlockNumber)
+	senderSigValidationGas, err := tx.ValidateSender(s, picker, currentBlockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -438,16 +438,16 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 	tx.checkNonce = true
 	tx.mu.Unlock()
 
-	gasFeePayer := uint64(0)
+	feePayerSigValidationGas := uint64(0)
 	if tx.IsFeeDelegatedTransaction() {
-		gasFeePayer, err = tx.ValidateFeePayer(s, picker, currentBlockNumber)
+		feePayerSigValidationGas, err = tx.ValidateFeePayer(s, picker, currentBlockNumber)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	tx.mu.Lock()
-	tx.validatedIntrinsicGas = intrinsicGas + gasFrom + gasFeePayer
+	tx.validatedIntrinsicGas = intrinsicGas + senderSigValidationGas + feePayerSigValidationGas
 	tx.mu.Unlock()
 
 	return tx, err
@@ -622,7 +622,7 @@ func (tx *Transaction) ValidateSender(signer Signer, p AccountKeyPicker, current
 	from := txfrom.GetFrom()
 	accKey := p.GetKey(from)
 
-	gasKey, err := accKey.SigValidationGas(currentBlockNumber, tx.GetRoleTypeForValidation(), len(pubkey))
+	senderSigValidationGas, err := accKey.SigValidationGas(currentBlockNumber, tx.GetRoleTypeForValidation(), len(pubkey))
 	if err != nil {
 		return 0, err
 	}
@@ -638,7 +638,7 @@ func (tx *Transaction) ValidateSender(signer Signer, p AccountKeyPicker, current
 	}
 	tx.mu.Unlock()
 
-	return gasKey, nil
+	return senderSigValidationGas, nil
 }
 
 // ValidateFeePayer finds a fee payer from a transaction.
@@ -657,7 +657,7 @@ func (tx *Transaction) ValidateFeePayer(signer Signer, p AccountKeyPicker, curre
 	feePayer := tf.GetFeePayer()
 	accKey := p.GetKey(feePayer)
 
-	gasKey, err := accKey.SigValidationGas(currentBlockNumber, accountkey.RoleFeePayer, len(pubkey))
+	feePayerSigValidationGas, err := accKey.SigValidationGas(currentBlockNumber, accountkey.RoleFeePayer, len(pubkey))
 	if err != nil {
 		return 0, err
 	}
@@ -672,7 +672,7 @@ func (tx *Transaction) ValidateFeePayer(signer Signer, p AccountKeyPicker, curre
 	}
 	tx.mu.Unlock()
 
-	return gasKey, nil
+	return feePayerSigValidationGas, nil
 }
 
 // Transactions is a Transaction slice type for basic sorting.
