@@ -1705,9 +1705,11 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		if params.BlockGenerationInterval < 1 {
 			logger.Crit("Block generation interval should be equal or larger than 1", "interval", params.BlockGenerationInterval)
 		}
+		logger.Warn("Block generation interval is set by flag", "blockGenerationInterval", params.BlockGenerationInterval)
 	}
 	if ctx.GlobalIsSet(BlockGenerationTimeLimitFlag.Name) {
 		params.BlockGenerationTimeLimit = ctx.GlobalDuration(BlockGenerationTimeLimitFlag.Name)
+		logger.Warn("Block generation time limit is set by flag", "blockGenerationTimeLimit", params.BlockGenerationTimeLimit)
 	}
 
 	params.OpcodeComputationCostLimit = ctx.GlobalUint64(OpcodeComputationCostLimitFlag.Name)
